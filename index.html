@@ -1,0 +1,3042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Packr — web pages into Android projects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#12181F; --steel:#1E2731; --steel-line:#2E3B49;
+    --paper:#E7E4DD; --paper-line:#C9C4B8; --paper-deep:#8C8778;
+    --signal:#00C2B2; --amber:#E9A13B; --rust:#D14B3C;
+    --display:"Archivo Narrow","Arial Narrow",sans-serif;
+    --body:"Archivo","Segoe UI",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--ink); color:var(--paper); font-family:var(--body); font-size:15px; line-height:1.5; }
+
+  /* rail ------------------------------------------------------------ */
+  .rail { position:sticky; top:0; z-index:40; display:flex; flex-wrap:wrap; align-items:center;
+          gap:22px; padding:12px 26px; background:var(--ink); border-bottom:1px solid var(--steel-line); }
+  .wordmark { font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:.18em;
+              text-transform:uppercase; margin-right:auto; }
+  .wordmark span { color:var(--signal); }
+  .rail .meta { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+                color:var(--paper-deep); }
+  .rail button { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+                 background:none; border:1px solid var(--steel-line); color:var(--paper-deep);
+                 border-radius:2px; padding:6px 12px; cursor:pointer; }
+  .rail button:hover { color:var(--paper); border-color:var(--paper-deep); }
+
+  /* shell ----------------------------------------------------------- */
+  .shell { display:grid; grid-template-columns:minmax(0,1fr) 320px; align-items:start;
+           max-width:1240px; margin:0 auto; padding:0 26px 100px; gap:32px; }
+
+  /* tabs ------------------------------------------------------------ */
+  .tabs { display:flex; flex-wrap:wrap; gap:0; margin-top:26px; }
+  .tabs button { font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:.13em;
+                 text-transform:uppercase; background:none; border:0; border-bottom:2px solid transparent;
+                 color:var(--paper-deep); padding:10px 16px; cursor:pointer; }
+  .tabs button[aria-selected="true"] { color:var(--paper); border-bottom-color:var(--signal); }
+  .tabs button:hover { color:var(--paper); }
+
+  .docket { background:var(--paper); color:var(--ink); border-radius:3px;
+            box-shadow:0 18px 48px rgba(0,0,0,.4); }
+  .panel { display:none; padding:26px 30px 30px; }
+  .panel[data-open="true"] { display:block; }
+  .panel > h2 { font-family:var(--display); font-weight:700; text-transform:uppercase;
+                letter-spacing:.1em; font-size:15px; margin:0 0 4px; }
+  .panel > .lede { font-size:13.5px; color:#5C6570; margin:0 0 22px; max-width:64ch; }
+
+  .group { border-top:1px solid var(--paper-line); padding-top:20px; margin-top:24px; }
+  .group:first-of-type { border-top:0; padding-top:0; margin-top:0; }
+  .group > h3 { font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.13em;
+                text-transform:uppercase; color:var(--paper-deep); margin:0 0 14px; }
+
+  /* fields ---------------------------------------------------------- */
+  .grid { display:grid; gap:15px 18px; }
+  .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .wide { grid-column:1 / -1; }
+
+  label.f { display:block; }
+  label.f > .cap { display:block; font-family:var(--mono); font-size:10px; font-weight:700;
+                   letter-spacing:.11em; text-transform:uppercase; color:#6C7581; margin-bottom:5px; }
+  label.f > .sub { display:block; font-size:12px; color:#6C7581; margin-top:5px; }
+
+  input[type=text], input[type=number], input[type=password], select, textarea {
+    width:100%; font-family:var(--mono); font-size:13px; color:var(--ink); background:#FDFCFA;
+    border:1px solid var(--paper-line); border-bottom-width:2px; border-radius:2px; padding:9px 11px; }
+  textarea { min-height:120px; resize:vertical; line-height:1.55; }
+  input[type=color] { width:100%; height:38px; padding:3px; border:1px solid var(--paper-line);
+                      border-radius:2px; background:#FDFCFA; }
+  input[type=file] { font-family:var(--mono); font-size:12px; width:100%; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible,
+  button:focus-visible { outline:2px solid var(--signal); outline-offset:2px; }
+  input::placeholder, textarea::placeholder { color:#A9A69C; }
+
+  .segs { display:flex; gap:8px; flex-wrap:wrap; }
+  .seg { flex:1 1 150px; text-align:left; font:inherit; cursor:pointer; background:#FDFCFA;
+         border:1px solid var(--paper-line); border-radius:2px; padding:10px 12px; color:var(--ink); }
+  .seg strong { display:block; font-family:var(--display); font-weight:700; text-transform:uppercase;
+                letter-spacing:.07em; font-size:12px; }
+  .seg em { font-style:normal; font-size:11.5px; color:#6C7581; }
+  .seg[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+  .seg[aria-pressed="true"] em { color:rgba(231,228,221,.7); }
+
+  .switches { display:grid; }
+  .sw { display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left; font:inherit;
+        color:var(--ink); background:none; border:0; border-top:1px solid var(--paper-line);
+        padding:11px 2px; cursor:pointer; }
+  .switches .sw:first-child { border-top:0; }
+  .sw .box { flex:none; width:16px; height:16px; margin-top:3px; border:1.5px solid #6C7581;
+             border-radius:2px; position:relative; }
+  .sw[aria-pressed="true"] .box { background:var(--ink); border-color:var(--ink); }
+  .sw[aria-pressed="true"] .box::after { content:""; position:absolute; left:4.5px; top:.5px;
+             width:4px; height:9px; border:solid var(--signal); border-width:0 2px 2px 0;
+             transform:rotate(42deg); }
+  .sw .c strong { display:block; font-size:13px; font-weight:600; }
+  .sw .c span { font-size:12px; color:#6C7581; }
+
+  .rows { display:grid; gap:8px; }
+  .row { display:grid; grid-template-columns:1fr 2fr auto; gap:8px; align-items:center; }
+  .row button { font-family:var(--mono); font-size:11px; background:none; border:1px solid var(--paper-line);
+                color:#6C7581; border-radius:2px; padding:8px 11px; cursor:pointer; }
+  .row button:hover { color:var(--rust); border-color:var(--rust); }
+  .addrow { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+            background:none; border:1px dashed var(--paper-line); color:#6C7581; border-radius:2px;
+            padding:9px 14px; cursor:pointer; margin-top:8px; }
+  .addrow:hover { color:var(--ink); border-color:var(--ink); }
+
+  .note { font-family:var(--mono); font-size:11.5px; line-height:1.55; margin-top:9px; padding:8px 11px;
+          border-left:3px solid var(--paper-deep); background:rgba(140,135,120,.12); color:#3C444E; }
+  .note[data-tone=ok]   { border-color:var(--signal); background:rgba(0,194,178,.1); }
+  .note[data-tone=warn] { border-color:var(--amber);  background:rgba(233,161,59,.14); }
+  .note[data-tone=bad]  { border-color:var(--rust);   background:rgba(209,75,60,.12); }
+  .note:empty { display:none; }
+
+  code.k { font-family:var(--mono); font-size:12px; background:rgba(18,24,31,.07);
+           padding:1px 5px; border-radius:2px; }
+
+  /* preview --------------------------------------------------------- */
+  .aside { position:sticky; top:74px; margin-top:26px; }
+
+  .phone { width:100%; max-width:290px; margin:0 auto; border:8px solid #05080B; border-radius:26px;
+           overflow:hidden; background:#fff; box-shadow:0 18px 44px rgba(0,0,0,.5);
+           display:flex; flex-direction:column; height:470px; position:relative; }
+  .pv-status { height:22px; display:flex; align-items:center; justify-content:space-between;
+               padding:0 11px; font-family:var(--mono); font-size:8.5px; letter-spacing:.04em; flex:none; }
+  .pv-bar { height:38px; display:flex; align-items:center; padding:0 13px; flex:none;
+            font-family:var(--body); font-weight:600; font-size:13px; }
+  .pv-prog { height:2.5px; flex:none; }
+  .pv-body { flex:1; overflow:hidden; padding:14px; font-size:11px; }
+  .pv-body .line { height:7px; border-radius:2px; background:currentColor; opacity:.13; margin-bottom:8px; }
+  .pv-body .line.s { width:55%; }
+  .pv-body .card { border:1px solid currentColor; border-radius:4px; padding:10px; opacity:.4; margin-top:14px; }
+  .pv-nav { display:flex; flex:none; }
+  .pv-nav span { flex:1; text-align:center; padding:9px 2px; font-size:9.5px; font-family:var(--body); }
+  .pv-splash { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+               flex-direction:column; gap:14px; z-index:5; }
+  .pv-splash img { width:88px; height:88px; object-fit:contain; }
+  .pv-splash[hidden] { display:none; }
+
+  .pv-caption { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+                color:var(--paper-deep); text-align:center; margin:12px 0 0; }
+  .pv-toggle { display:flex; gap:6px; justify-content:center; margin-top:10px; }
+  .pv-toggle button { font-family:var(--mono); font-size:10px; letter-spacing:.07em; text-transform:uppercase;
+                      background:none; border:1px solid var(--steel-line); color:var(--paper-deep);
+                      border-radius:2px; padding:5px 10px; cursor:pointer; }
+  .pv-toggle button[aria-pressed=true] { color:var(--signal); border-color:var(--signal); }
+
+  .go { width:100%; margin-top:18px; font-family:var(--display); font-weight:700; font-size:15px;
+        letter-spacing:.13em; text-transform:uppercase; color:#08161A; background:var(--signal);
+        border:0; border-radius:3px; padding:15px; cursor:pointer; }
+  .go:hover:not(:disabled) { background:#21D9C9; }
+  .go:disabled { background:var(--steel-line); color:rgba(231,228,221,.45); cursor:not-allowed; }
+  .go.ghost { background:none; border:1px solid var(--steel-line); color:var(--paper-deep);
+              font-size:12px; padding:11px; margin-top:9px; }
+  .go.ghost:hover { color:var(--paper); border-color:var(--paper-deep); background:none; }
+
+  .aside-note { font-family:var(--mono); font-size:10.5px; line-height:1.6; color:var(--paper-deep);
+                margin-top:12px; }
+
+  .errors { margin:0 30px 20px; padding:13px 15px; border-left:3px solid var(--rust);
+            background:rgba(209,75,60,.1); font-size:13px; color:#6E241B; }
+  .errors ul { margin:0; padding-left:18px; }
+  .errors:empty { display:none; }
+
+  @media (max-width:960px) {
+    .shell { grid-template-columns:minmax(0,1fr); }
+    .aside { position:static; }
+    .g2,.g3 { grid-template-columns:minmax(0,1fr); }
+    .panel { padding:22px 20px 26px; }
+    .row { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion:reduce) { * { transition:none!important; animation:none!important; } }
+</style>
+</head>
+<body>
+
+<header class="rail">
+  <div class="wordmark">Pack<span>r</span></div>
+  <span class="meta" id="meta">no project yet</span>
+  <button type="button" id="load-settings">Load settings</button>
+  <button type="button" id="save-settings">Save settings</button>
+  <input type="file" id="settings-file" accept=".json" hidden>
+</header>
+
+<main class="shell">
+  <div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+    <div class="docket">
+      <div class="errors" id="errors"></div>
+
+      <!-- SOURCE ------------------------------------------------------ -->
+      <section class="panel" data-tab="Source">
+        <h2>Where the app gets its pages</h2>
+        <p class="lede">Bundled files are compiled into the app and work with no connection. A live address is easier to update but needs the network every time.</p>
+
+        <div class="group">
+          <div class="segs" data-seg="source.mode">
+            <button type="button" class="seg" data-value="files">
+              <strong>Files from this computer</strong><em>Bundled in. Works offline.</em>
+            </button>
+            <button type="button" class="seg" data-value="url">
+              <strong>Live web address</strong><em>Loaded fresh on each launch.</em>
+            </button>
+          </div>
+        </div>
+
+        <div class="group" data-when="source.mode=files">
+          <h3>Pick your web files</h3>
+          <div class="grid g2">
+            <label class="f">
+              <span class="cap">A whole folder</span>
+              <input type="file" id="pick-folder" webkitdirectory directory multiple>
+              <span class="sub">Everything inside is bundled. Needs an index.html at the top.</span>
+            </label>
+            <label class="f">
+              <span class="cap">Or single files</span>
+              <input type="file" id="pick-files" multiple>
+              <span class="sub">Good for a one-file HTML app.</span>
+            </label>
+          </div>
+          <div class="note" id="files-note"></div>
+        </div>
+
+        <div class="group" data-when="source.mode=url">
+          <h3>The address to open</h3>
+          <label class="f">
+            <span class="cap">Start URL</span>
+            <input type="text" data-bind="source.url" placeholder="https://example.org/app/">
+          </label>
+          <div class="note" id="url-note"></div>
+        </div>
+      </section>
+
+      <!-- IDENTITY ---------------------------------------------------- -->
+      <section class="panel" data-tab="Identity">
+        <h2>What the system calls this app</h2>
+        <p class="lede">The package ID is permanent. Once an app is published under it, it can never be changed.</p>
+
+        <div class="group">
+          <div class="grid g2">
+            <label class="f"><span class="cap">App name</span>
+              <input type="text" data-bind="identity.appName" placeholder="Payroll Manager"></label>
+            <label class="f"><span class="cap">Package ID</span>
+              <input type="text" data-bind="identity.packageId" spellcheck="false" placeholder="jm.org.cestis.payroll"></label>
+            <label class="f"><span class="cap">Version name</span>
+              <input type="text" data-bind="identity.versionName" placeholder="1.0.0"></label>
+            <label class="f"><span class="cap">Version code</span>
+              <input type="number" min="1" step="1" data-bind="identity.versionCode">
+              <span class="sub">Must increase with every upload to Play.</span></label>
+          </div>
+          <div class="note" id="id-note"></div>
+        </div>
+
+        <div class="group">
+          <h3>Android versions</h3>
+          <div class="grid g3">
+            <label class="f"><span class="cap">Minimum</span>
+              <select data-bind="identity.minSdk">
+                <option value="21">Android 5.0 · API 21</option>
+                <option value="23">Android 6.0 · API 23</option>
+                <option value="24">Android 7.0 · API 24</option>
+                <option value="26">Android 8.0 · API 26</option>
+                <option value="29">Android 10 · API 29</option>
+              </select></label>
+            <label class="f"><span class="cap">Target</span>
+              <select data-bind="identity.targetSdk">
+                <option value="34">API 34</option>
+                <option value="35">API 35</option>
+                <option value="36">API 36</option>
+              </select>
+              <span class="sub">Play requires a recent target.</span></label>
+            <label class="f"><span class="cap">Compile</span>
+              <select data-bind="identity.compileSdk">
+                <option value="34">API 34</option>
+                <option value="35">API 35</option>
+                <option value="36">API 36</option>
+              </select></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOOK -------------------------------------------------------- -->
+      <section class="panel" data-tab="Look">
+        <h2>Colour, icon and screen</h2>
+        <p class="lede">Everything here shows in the preview beside this form as you change it.</p>
+
+        <div class="group">
+          <h3>Launcher icon</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Icon image</span>
+              <input type="file" id="pick-icon" accept="image/*">
+              <span class="sub">Square PNG, ideally 512 by 512. Leave empty for a placeholder mark.</span></label>
+            <label class="f"><span class="cap">Icon background</span>
+              <input type="color" data-bind="look.iconBackground">
+              <span class="sub">Shows behind the icon on the launcher.</span></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Colours</h3>
+          <div class="grid g3">
+            <label class="f"><span class="cap">Theme</span><input type="color" data-bind="look.themeColor"></label>
+            <label class="f"><span class="cap">Status bar</span><input type="color" data-bind="look.statusBarColor"></label>
+            <label class="f"><span class="cap">Navigation bar</span><input type="color" data-bind="look.navBarColor"></label>
+            <label class="f"><span class="cap">Page background</span><input type="color" data-bind="look.backgroundColor"></label>
+            <label class="f"><span class="cap">Progress bar</span><input type="color" data-bind="look.progressColor"></label>
+            <label class="f"><span class="cap">Refresh spinner</span><input type="color" data-bind="look.refreshColor"></label>
+          </div>
+          <div class="switches" style="margin-top:16px">
+            <button type="button" class="sw" data-bind="look.statusBarLightIcons"><span class="box"></span>
+              <span class="c"><strong>Light icons in the status bar</strong>
+              <span>Turn on for a dark status bar. Off gives dark icons for a light bar.</span></span></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Screen</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Orientation</span>
+              <select data-bind="look.orientation">
+                <option value="unspecified">Follow the device</option>
+                <option value="portrait">Lock to portrait</option>
+                <option value="landscape">Lock to landscape</option>
+                <option value="sensorPortrait">Portrait, both ways up</option>
+              </select></label>
+            <label class="f"><span class="cap">Dark mode</span>
+              <select data-bind="look.darkMode">
+                <option value="system">Follow the system</option>
+                <option value="light">Always light</option>
+                <option value="dark">Always dark</option>
+              </select></label>
+          </div>
+          <div class="switches" style="margin-top:16px">
+            <button type="button" class="sw" data-bind="look.forceWebViewDark"><span class="box"></span>
+              <span class="c"><strong>Let Android darken the page itself</strong>
+              <span>For pages with no dark styling of their own. Results vary — test it.</span></span></button>
+            <button type="button" class="sw" data-bind="look.fullscreen"><span class="box"></span>
+              <span class="c"><strong>Fullscreen</strong>
+              <span>Hides the status and navigation bars. Suits kiosks and media.</span></span></button>
+            <button type="button" class="sw" data-bind="look.overscroll"><span class="box"></span>
+              <span class="c"><strong>Overscroll glow at the edges</strong>
+              <span>Turn off for a flatter, more app-like scroll.</span></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHROME ------------------------------------------------------ -->
+      <section class="panel" data-tab="Chrome">
+        <h2>Bars around the page</h2>
+        <p class="lede">A toolbar and bottom navigation are what separate an app from a browser window. They are also what Play reviewers look for.</p>
+
+        <div class="group">
+          <h3>Splash screen</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="chrome.splash"><span class="box"></span>
+              <span class="c"><strong>Show a splash screen while the page loads</strong>
+              <span>Covers the blank flash before the first paint.</span></span></button>
+          </div>
+          <div class="grid g3" data-when="chrome.splash=true" style="margin-top:14px">
+            <label class="f"><span class="cap">Splash colour</span><input type="color" data-bind="chrome.splashColor"></label>
+            <label class="f"><span class="cap">Minimum time (ms)</span><input type="number" min="0" step="100" data-bind="chrome.splashMinMs"></label>
+            <label class="f"><span class="cap">Splash logo</span><input type="file" id="pick-splash" accept="image/*">
+              <span class="sub">Leave empty to use the app icon.</span></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Top toolbar</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="chrome.toolbar"><span class="box"></span>
+              <span class="c"><strong>Show a toolbar</strong>
+              <span>A title bar at the top with an optional menu.</span></span></button>
+          </div>
+          <div data-when="chrome.toolbar=true">
+            <div class="grid g3" style="margin-top:14px">
+              <label class="f"><span class="cap">Title</span><input type="text" data-bind="chrome.toolbarTitle" placeholder="App name"></label>
+              <label class="f"><span class="cap">Bar colour</span><input type="color" data-bind="chrome.toolbarColor"></label>
+              <label class="f"><span class="cap">Text colour</span><input type="color" data-bind="chrome.toolbarTextColor"></label>
+            </div>
+            <div class="switches" style="margin-top:14px">
+              <button type="button" class="sw" data-bind="chrome.toolbarUsePageTitle"><span class="box"></span>
+                <span class="c"><strong>Use the page title instead</strong><span>The toolbar follows whatever page is open.</span></span></button>
+              <button type="button" class="sw" data-bind="chrome.toolbarRefresh"><span class="box"></span>
+                <span class="c"><strong>Reload in the menu</strong><span></span></span></button>
+              <button type="button" class="sw" data-bind="chrome.toolbarShare"><span class="box"></span>
+                <span class="c"><strong>Share in the menu</strong><span></span></span></button>
+              <button type="button" class="sw" data-bind="chrome.toolbarOpenInBrowser"><span class="box"></span>
+                <span class="c"><strong>Open in browser in the menu</strong><span></span></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Bottom navigation</h3>
+          <p class="lede" style="margin-bottom:14px">Each item loads a page. Use a full address, or a path like <code class="k">reports.html</code> for bundled files.</p>
+          <div class="rows" id="nav-rows"></div>
+          <button type="button" class="addrow" id="add-nav">Add an item</button>
+          <div class="grid g2" data-when="chrome.hasNav=true" style="margin-top:14px">
+            <label class="f"><span class="cap">Bar colour</span><input type="color" data-bind="chrome.bottomNavColor"></label>
+            <label class="f"><span class="cap">Text colour</span><input type="color" data-bind="chrome.bottomNavTextColor"></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Loading indicator</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="chrome.progressBar"><span class="box"></span>
+              <span class="c"><strong>Thin progress line at the top</strong><span>Shows how far a page has loaded.</span></span></button>
+            <button type="button" class="sw" data-bind="chrome.pullToRefresh"><span class="box"></span>
+              <span class="c"><strong>Pull down to reload</strong><span>Useful for live sites, distracting for app-like pages.</span></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEHAVIOUR --------------------------------------------------- -->
+      <section class="panel" data-tab="Behaviour">
+        <h2>How the app acts</h2>
+        <p class="lede">Only request permissions the page actually uses — each one appears on the install screen and in the Play listing.</p>
+
+        <div class="group">
+          <h3>Links</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Links to other sites</span>
+              <select data-bind="behaviour.externalMode">
+                <option value="browser">Open in the phone's browser</option>
+                <option value="customtab">Open in an in-app browser tab</option>
+                <option value="internal">Stay inside the app</option>
+                <option value="block">Block them</option>
+              </select></label>
+            <label class="f"><span class="cap">Back button</span>
+              <select data-bind="behaviour.backMode">
+                <option value="history">Go back through page history</option>
+                <option value="double">Press twice to leave</option>
+                <option value="confirm">Ask before leaving</option>
+                <option value="exit">Leave immediately</option>
+              </select></label>
+            <label class="f wide"><span class="cap">Treat these hosts as part of the app</span>
+              <input type="text" data-bind="behaviour.internalHosts" placeholder="example.org, cdn.example.org">
+              <span class="sub">Comma separated. Subdomains are included. Leave empty to use the start address.</span></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Permissions</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="behaviour.permCamera"><span class="box"></span>
+              <span class="c"><strong>Camera</strong><span>Barcode scanning, photo capture, video calls.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.permMicrophone"><span class="box"></span>
+              <span class="c"><strong>Microphone</strong><span>Voice recording or calls.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.permLocation"><span class="box"></span>
+              <span class="c"><strong>Location</strong><span>Pages that call the geolocation API.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.permNotifications"><span class="box"></span>
+              <span class="c"><strong>Notifications</strong><span>Required on Android 13 and later to show any notification.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.permVibrate"><span class="box"></span>
+              <span class="c"><strong>Vibration</strong><span>Needed for the bridge vibrate call.</span></span></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Capabilities</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="behaviour.downloads"><span class="box"></span>
+              <span class="c"><strong>Allow downloads</strong>
+              <span>Includes blob and data URLs — the kind a browser-side CSV or spreadsheet export produces.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.fileUploads"><span class="box"></span>
+              <span class="c"><strong>Allow file uploads</strong><span>For file input fields on the page.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.zoom"><span class="box"></span>
+              <span class="c"><strong>Pinch zoom</strong><span>Turn on for pages that are not mobile-friendly.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.textSelection"><span class="box"></span>
+              <span class="c"><strong>Allow text selection</strong><span>Turn off for a locked-down, app-like feel.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.longPress"><span class="box"></span>
+              <span class="c"><strong>Allow long press menus</strong><span>The image and link context menu.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.keepScreenOn"><span class="box"></span>
+              <span class="c"><strong>Keep the screen awake</strong><span>For dashboards and displays.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.blockScreenshots"><span class="box"></span>
+              <span class="c"><strong>Block screenshots and screen recording</strong>
+              <span>Also hides the app in the recents list. Worth it for anything showing payroll or personal data.</span></span></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Network and storage</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Caching</span>
+              <select data-bind="behaviour.cacheMode">
+                <option value="-1">Normal browser caching</option>
+                <option value="1">Never cache — always fetch</option>
+                <option value="2">Cache only — never fetch</option>
+                <option value="3">Cache first, fetch if missing</option>
+              </select></label>
+            <label class="f"><span class="cap">Cookies</span>
+              <select data-bind="behaviour.cookieMode">
+                <option value="all">Allow all cookies</option>
+                <option value="first">First party only</option>
+                <option value="none">Block cookies</option>
+              </select></label>
+          </div>
+          <div class="switches" style="margin-top:14px">
+            <button type="button" class="sw" data-bind="behaviour.cleartext"><span class="box"></span>
+              <span class="c"><strong>Allow plain http traffic</strong>
+              <span>Needed for an http:// address or a local server. Play reviewers treat this as a weakness.</span></span></button>
+            <button type="button" class="sw" data-bind="behaviour.allowMixedContent"><span class="box"></span>
+              <span class="c"><strong>Allow http resources on an https page</strong><span>Off is safer.</span></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CODE -------------------------------------------------------- -->
+      <section class="panel" data-tab="Code">
+        <h2>Change the page from the app</h2>
+        <p class="lede">These run on every page after it loads, so you can restyle or extend a site you do not control.</p>
+
+        <div class="group">
+          <h3>Injected CSS</h3>
+          <label class="f">
+            <textarea data-bind="code.css" spellcheck="false" placeholder="/* Hide a site header you do not want in the app */
+header.site-nav { display: none; }
+body { padding-top: 0; }"></textarea>
+          </label>
+        </div>
+
+        <div class="group">
+          <h3>Injected JavaScript</h3>
+          <label class="f">
+            <textarea data-bind="code.js" spellcheck="false" placeholder="// Runs after each page finishes loading
+document.querySelectorAll('.print-only').forEach(function (el) { el.remove(); });"></textarea>
+          </label>
+        </div>
+
+        <div class="group">
+          <h3>Native bridge</h3>
+          <div class="switches">
+            <button type="button" class="sw" data-bind="code.jsBridge"><span class="box"></span>
+              <span class="c"><strong>Expose native functions to the page</strong>
+              <span>Adds a global <code class="k">Packr</code> object your pages can call.</span></span></button>
+          </div>
+          <div class="note" data-tone="ok" data-when="code.jsBridge=true">Packr.toast(msg) · Packr.share(text, url) · Packr.vibrate(ms) · Packr.openExternal(url) · Packr.exit() · Packr.appVersion() · Packr.appVersionCode() · Packr.isOnline() · Packr.setStatusBarColor(hex) · Packr.saveFile(dataUrl, name)</div>
+        </div>
+
+        <div class="group">
+          <h3>Identify the app to your server</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Add to the user agent</span>
+              <input type="text" data-bind="code.userAgentSuffix" placeholder="PayrollApp/1.0">
+              <span class="sub">Appended to the normal one. Lets your site detect the app.</span></label>
+            <label class="f"><span class="cap">Or replace it entirely</span>
+              <input type="text" data-bind="code.userAgent" placeholder="leave empty unless you must">
+            </label>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Offline page</h3>
+          <label class="f"><span class="cap">Shown when a page cannot load</span>
+            <textarea data-bind="code.offlineHtml" spellcheck="false" placeholder="Leave empty for the built-in page. Full HTML document if you supply one."></textarea>
+          </label>
+        </div>
+      </section>
+
+      <!-- BUILD ------------------------------------------------------- -->
+      <section class="panel" data-tab="Build">
+        <h2>Getting an installable file</h2>
+        <p class="lede">Packr generates the project here in your browser. Building the APK needs a compiler, and there are three places to run one.</p>
+
+        <div class="group">
+          <h3>Where you will build</h3>
+          <div class="segs" data-seg="build.route">
+            <button type="button" class="seg" data-value="github">
+              <strong>GitHub Actions</strong><em>Push the folder. Free build, nothing to install.</em>
+            </button>
+            <button type="button" class="seg" data-value="studio">
+              <strong>Android Studio</strong><em>Open the folder and press Run.</em>
+            </button>
+            <button type="button" class="seg" data-value="cli">
+              <strong>Command line</strong><em>gradlew assembleRelease.</em>
+            </button>
+          </div>
+          <div class="note" id="route-note"></div>
+        </div>
+
+        <div class="group">
+          <h3>Signing</h3>
+          <p class="lede" style="margin-bottom:14px">The keystore never passes through this page. You create it yourself and, for GitHub, store it as a repository secret.</p>
+          <div class="note" data-tone="warn">Back the keystore up in more than one place. If you publish an app and lose its key, you can never ship an update to it — there is no recovery, only a new listing that your users will not follow.</div>
+          <div class="note" id="signing-steps"></div>
+        </div>
+
+        <div class="group">
+          <h3>Before you plan on the Play Store</h3>
+          <div class="note">Google Play's minimum functionality policy rejects apps that only display a website. Bundled offline files, downloads, a toolbar and bottom navigation all argue that this is an app rather than a shortcut. For staff phones and internal distribution, none of that applies — sideload the APK and you are done.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <aside class="aside">
+    <div class="phone" id="phone">
+      <div class="pv-status" id="pv-status"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="pv-bar" id="pv-bar">App</div>
+      <div class="pv-prog" id="pv-prog"></div>
+      <div class="pv-body" id="pv-body">
+        <div class="line"></div><div class="line"></div><div class="line s"></div>
+        <div class="card"><div class="line"></div><div class="line s"></div></div>
+      </div>
+      <div class="pv-nav" id="pv-nav"></div>
+      <div class="pv-splash" id="pv-splash" hidden><img id="pv-splash-img" alt=""></div>
+    </div>
+    <p class="pv-caption" id="pv-caption">Preview</p>
+    <div class="pv-toggle">
+      <button type="button" id="show-splash" aria-pressed="false">Splash</button>
+      <button type="button" id="show-page" aria-pressed="true">Page</button>
+    </div>
+
+    <button type="button" class="go" id="generate">Generate the project</button>
+    <button type="button" class="go ghost" id="preview-files">List what will be written</button>
+    <p class="aside-note" id="aside-note">Produces a ZIP containing a complete Android project, a GitHub Actions workflow, and your settings so you can reopen them here.</p>
+  </aside>
+</main>
+
+<!-- ==================================================================
+     PROJECT TEMPLATES
+     These are plain text. Edit them directly and the generated project
+     changes. {{TOKENS}} are filled in at generation time.
+     ================================================================== -->
+
+<script type="text/plain" id="tpl-java">package {{PACKAGE_ID}};
+
+import android.annotation.SuppressLint;
+import android.app.DownloadManager;
+import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.text.TextUtils;
+import android.util.Base64;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
+import android.webkit.MimeTypeMap;
+import android.webkit.PermissionRequest;
+import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.Toolbar;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.webkit.WebSettingsCompat;
+import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewFeature;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Every behaviour here is read from assets/packr/config.json at startup.
+ * To change how the app looks or behaves, edit that file and rebuild --
+ * you should not need to touch this class.
+ */
+public class MainActivity extends AppCompatActivity {
+
+    private static final String ASSET_DOMAIN = "appassets.androidplatform.net";
+
+    private JSONObject config;
+    private WebView webView;
+    private SwipeRefreshLayout refreshLayout;
+    private ProgressBar progressBar;
+    private Toolbar toolbar;
+    private View splash;
+    private LinearLayout bottomNav;
+    private WebViewAssetLoader assetLoader;
+
+    private String injectCss = "";
+    private String injectJs = "";
+    private String offlineHtml = "";
+    private List<String> internalHosts = new ArrayList<>();
+
+    private ValueCallback<Uri[]> filePathCallback;
+    private ActivityResultLauncher<Intent> fileChooserLauncher;
+    private ActivityResultLauncher<String[]> permissionLauncher;
+
+    private PermissionRequest pendingWebPermission;
+    private GeolocationPermissions.Callback pendingGeoCallback;
+    private String pendingGeoOrigin;
+
+    private long lastBackPress = 0L;
+    private long splashShownAt = 0L;
+
+    // ------------------------------------------------------------- lifecycle
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        config = readConfigJson();
+        applyNightMode();
+        super.onCreate(savedInstanceState);
+        applyOrientation();
+        setContentView(R.layout.activity_main);
+
+        injectCss = readAsset("packr/inject.css");
+        injectJs = readAsset("packr/inject.js");
+        offlineHtml = readAsset("packr/offline.html");
+        readInternalHosts();
+
+        bindViews();
+        applyWindowFlags();
+        applySystemBars();
+        setUpToolbar();
+        setUpBottomNav();
+        setUpSplash();
+        registerLaunchers();
+        configureWebView();
+        configureRefresh();
+        configureBackNavigation();
+
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+        } else {
+            webView.loadUrl(startUrl());
+        }
+    }
+
+    private void bindViews() {
+        webView = findViewById(R.id.webview);
+        refreshLayout = findViewById(R.id.refresh);
+        progressBar = findViewById(R.id.progress);
+        toolbar = findViewById(R.id.toolbar);
+        splash = findViewById(R.id.splash);
+        bottomNav = findViewById(R.id.bottom_nav);
+    }
+
+    // ---------------------------------------------------------------- config
+
+    private JSONObject readConfigJson() {
+        try {
+            return new JSONObject(readAsset("packr/config.json"));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    private String readAsset(String name) {
+        try (InputStream input = getAssets().open(name)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            return new String(out.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private boolean flag(String key, boolean fallback) {
+        return config.optBoolean(key, fallback);
+    }
+
+    private String text(String key, String fallback) {
+        String value = config.optString(key, fallback);
+        return value == null ? fallback : value;
+    }
+
+    private int colour(String key, int fallback) {
+        String value = config.optString(key, "");
+        if (TextUtils.isEmpty(value)) return fallback;
+        try {
+            return Color.parseColor(value);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private String startUrl() {
+        if (flag("localMode", false)) {
+            return "https://" + ASSET_DOMAIN + "/assets/www/" + text("entry", "index.html");
+        }
+        return text("startUrl", "about:blank");
+    }
+
+    private void readInternalHosts() {
+        JSONArray array = config.optJSONArray("internalHosts");
+        if (array == null) return;
+        for (int i = 0; i < array.length(); i++) {
+            String host = array.optString(i, "").trim().toLowerCase();
+            if (!host.isEmpty()) internalHosts.add(host);
+        }
+    }
+
+    // ------------------------------------------------------------ appearance
+
+    private void applyNightMode() {
+        String mode = config.optString("darkMode", "system");
+        if ("light".equals(mode)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if ("dark".equals(mode)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+    }
+
+    private void applyOrientation() {
+        String value = config.optString("orientation", "unspecified");
+        if ("portrait".equals(value)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        } else if ("landscape".equals(value)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        } else if ("sensorPortrait".equals(value)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
+        }
+    }
+
+    private void applyWindowFlags() {
+        if (flag("blockScreenshots", false)) {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+                    WindowManager.LayoutParams.FLAG_SECURE);
+        }
+        if (flag("keepScreenOn", false)) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+        if (flag("fullscreen", false)) {
+            hideSystemBars();
+        }
+    }
+
+    private void hideSystemBars() {
+        View decor = getWindow().getDecorView();
+        decor.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+    }
+
+    @SuppressLint("InlinedApi")
+    private void applySystemBars() {
+        Window window = getWindow();
+        int statusColour = colour("statusBarColor", colour("themeColor", Color.BLACK));
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.setStatusBarColor(statusColour);
+        window.setNavigationBarColor(colour("navBarColor", statusColour));
+
+        if (flag("statusBarLightIcons", false)) {
+            return; // light icons are the platform default on a dark bar
+        }
+        View decor = window.getDecorView();
+        int visibility = decor.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            visibility |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        decor.setSystemUiVisibility(visibility);
+    }
+
+    private void setUpToolbar() {
+        if (!flag("toolbar", false)) {
+            toolbar.setVisibility(View.GONE);
+            return;
+        }
+        toolbar.setVisibility(View.VISIBLE);
+        toolbar.setBackgroundColor(colour("toolbarColor", colour("themeColor", Color.DKGRAY)));
+        int textColour = colour("toolbarTextColor", Color.WHITE);
+        toolbar.setTitleTextColor(textColour);
+        toolbar.setTitle(text("toolbarTitle", getString(R.string.app_name)));
+        setSupportActionBar(toolbar);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        if (!flag("toolbar", false)) return false;
+        if (flag("toolbarRefresh", false)) {
+            menu.add(0, 1, 0, R.string.action_reload)
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        }
+        if (flag("toolbarShare", false)) {
+            menu.add(0, 2, 1, R.string.action_share)
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        }
+        if (flag("toolbarOpenInBrowser", false)) {
+            menu.add(0, 3, 2, R.string.action_open_browser)
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == 1) {
+            webView.reload();
+            return true;
+        }
+        if (item.getItemId() == 2) {
+            shareCurrentPage();
+            return true;
+        }
+        if (item.getItemId() == 3) {
+            openExternally(Uri.parse(webView.getUrl() == null ? startUrl() : webView.getUrl()));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void setUpBottomNav() {
+        JSONArray items = config.optJSONArray("bottomNav");
+        if (items == null || items.length() == 0) {
+            bottomNav.setVisibility(View.GONE);
+            return;
+        }
+        bottomNav.setVisibility(View.VISIBLE);
+        bottomNav.setBackgroundColor(colour("bottomNavColor", colour("themeColor", Color.DKGRAY)));
+        int textColour = colour("bottomNavTextColor", Color.WHITE);
+
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i);
+            if (item == null) continue;
+            final String target = item.optString("url", "");
+            TextView button = new TextView(this);
+            button.setText(item.optString("label", "Item"));
+            button.setTextColor(textColour);
+            button.setGravity(Gravity.CENTER);
+            button.setAllCaps(false);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+            int pad = dp(12);
+            button.setPadding(dp(4), pad, dp(4), pad);
+
+            LinearLayout.LayoutParams params =
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            button.setLayoutParams(params);
+            button.setOnClickListener(v -> {
+                if (!target.isEmpty()) webView.loadUrl(resolveNavTarget(target));
+            });
+            bottomNav.addView(button);
+        }
+    }
+
+    private String resolveNavTarget(String target) {
+        if (target.startsWith("http://") || target.startsWith("https://")) return target;
+        if (flag("localMode", false)) {
+            return "https://" + ASSET_DOMAIN + "/assets/www/" + target.replaceFirst("^/", "");
+        }
+        try {
+            return Uri.parse(startUrl()).buildUpon().path(target).build().toString();
+        } catch (Exception e) {
+            return target;
+        }
+    }
+
+    private void setUpSplash() {
+        if (!flag("splash", false)) {
+            splash.setVisibility(View.GONE);
+            return;
+        }
+        splash.setVisibility(View.VISIBLE);
+        splash.setBackgroundColor(colour("splashColor", colour("themeColor", Color.BLACK)));
+        ImageView logo = findViewById(R.id.splash_logo);
+        if (assetExists("packr/splash.png")) {
+            logo.setImageResource(R.drawable.splash_logo);
+        } else {
+            logo.setVisibility(View.GONE);
+        }
+        splashShownAt = System.currentTimeMillis();
+    }
+
+    private boolean assetExists(String name) {
+        try (InputStream stream = getAssets().open(name)) {
+            return stream != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void dismissSplash() {
+        if (splash.getVisibility() != View.VISIBLE) return;
+        long minimum = config.optLong("splashMinMs", 600L);
+        long elapsed = System.currentTimeMillis() - splashShownAt;
+        long wait = Math.max(0L, minimum - elapsed);
+        splash.postDelayed(() -> {
+            splash.animate().alpha(0f).setDuration(220).withEndAction(
+                    () -> splash.setVisibility(View.GONE)).start();
+        }, wait);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    // ------------------------------------------------------------- launchers
+
+    private void registerLaunchers() {
+        fileChooserLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                new ActivityResultCallback<ActivityResult>() {
+                    @Override
+                    public void onActivityResult(ActivityResult result) {
+                        if (filePathCallback == null) return;
+                        Uri[] uris = null;
+                        Intent data = result.getData();
+                        if (result.getResultCode() == RESULT_OK && data != null) {
+                            if (data.getClipData() != null) {
+                                int count = data.getClipData().getItemCount();
+                                uris = new Uri[count];
+                                for (int i = 0; i < count; i++) {
+                                    uris[i] = data.getClipData().getItemAt(i).getUri();
+                                }
+                            } else if (data.getData() != null) {
+                                uris = new Uri[]{data.getData()};
+                            }
+                        }
+                        filePathCallback.onReceiveValue(uris);
+                        filePathCallback = null;
+                    }
+                });
+
+        permissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                grants -> {
+                    boolean allGranted = !grants.containsValue(Boolean.FALSE);
+                    if (pendingWebPermission != null) {
+                        if (allGranted) {
+                            pendingWebPermission.grant(pendingWebPermission.getResources());
+                        } else {
+                            pendingWebPermission.deny();
+                        }
+                        pendingWebPermission = null;
+                    }
+                    if (pendingGeoCallback != null) {
+                        pendingGeoCallback.invoke(pendingGeoOrigin, allGranted, false);
+                        pendingGeoCallback = null;
+                        pendingGeoOrigin = null;
+                    }
+                });
+    }
+
+    // -------------------------------------------------------------- web view
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configureWebView() {
+        assetLoader = new WebViewAssetLoader.Builder()
+                .setDomain(ASSET_DOMAIN)
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(flag("javascript", true));
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(flag("requireGestureForMedia", false));
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(true);
+
+        boolean zoom = flag("zoom", false);
+        settings.setSupportZoom(zoom);
+        settings.setBuiltInZoomControls(zoom);
+        settings.setDisplayZoomControls(false);
+
+        settings.setCacheMode(config.optInt("cacheMode", WebSettings.LOAD_DEFAULT));
+        settings.setMixedContentMode(flag("allowMixedContent", false)
+                ? WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                : WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+
+        String userAgent = text("userAgent", "");
+        String appendAgent = text("userAgentSuffix", "");
+        if (!userAgent.isEmpty()) {
+            settings.setUserAgentString(userAgent);
+        } else if (!appendAgent.isEmpty()) {
+            settings.setUserAgentString(settings.getUserAgentString() + " " + appendAgent);
+        }
+
+        if (flag("forceWebViewDark", false)
+                && WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true);
+        }
+
+        if (!flag("overscroll", true)) {
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        }
+        int background = colour("backgroundColor", Color.TRANSPARENT);
+        if (background != Color.TRANSPARENT) webView.setBackgroundColor(background);
+
+        CookieManager.getInstance().setAcceptCookie(flag("cookies", true));
+        CookieManager.getInstance()
+                .setAcceptThirdPartyCookies(webView, flag("thirdPartyCookies", true));
+
+        if (!flag("longPress", true)) {
+            webView.setOnLongClickListener(v -> true);
+            webView.setHapticFeedbackEnabled(false);
+        }
+
+        if (flag("jsBridge", false)) {
+            webView.addJavascriptInterface(new Bridge(), "Packr");
+        }
+        // The download bridge is always present; blob: downloads cannot work without it.
+        webView.addJavascriptInterface(new DownloadBridge(), "PackrDownload");
+
+        if (config.optBoolean("remoteDebugging", false)) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+
+        webView.setWebViewClient(new HostWebViewClient());
+        webView.setWebChromeClient(new HostChromeClient());
+
+        if (flag("downloads", true)) {
+            webView.setDownloadListener(this::handleDownload);
+        }
+    }
+
+    private void configureRefresh() {
+        if (!flag("pullToRefresh", false)) {
+            refreshLayout.setEnabled(false);
+            return;
+        }
+        refreshLayout.setColorSchemeColors(colour("refreshColor", colour("themeColor", Color.GRAY)));
+        refreshLayout.setOnRefreshListener(() -> webView.reload());
+    }
+
+    private void configureBackNavigation() {
+        final String mode = text("backMode", "history");
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if ("history".equals(mode) && webView.canGoBack()) {
+                    webView.goBack();
+                    return;
+                }
+                if ("double".equals(mode)) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastBackPress > 2000L) {
+                        lastBackPress = now;
+                        toast(getString(R.string.press_again_to_exit));
+                        return;
+                    }
+                } else if ("confirm".equals(mode)) {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setMessage(R.string.confirm_exit)
+                            .setNegativeButton(R.string.stay, null)
+                            .setPositiveButton(R.string.leave, (d, w) -> finish())
+                            .show();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
+    }
+
+    private class HostWebViewClient extends WebViewClient {
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            return assetLoader.shouldInterceptRequest(request.getUrl());
+        }
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            Uri uri = request.getUrl();
+            String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+
+            if (!scheme.equals("http") && !scheme.equals("https")) {
+                return openExternally(uri);
+            }
+            if (isInternal(uri)) {
+                return false;
+            }
+
+            String mode = text("externalMode", "browser");
+            if ("internal".equals(mode)) return false;
+            if ("block".equals(mode)) {
+                toast(getString(R.string.link_blocked));
+                return true;
+            }
+            if ("customtab".equals(mode)) {
+                try {
+                    CustomTabsIntent intent = new CustomTabsIntent.Builder()
+                            .setToolbarColor(colour("themeColor", Color.DKGRAY))
+                            .setShowTitle(true)
+                            .build();
+                    intent.launchUrl(MainActivity.this, uri);
+                    return true;
+                } catch (Exception e) {
+                    return openExternally(uri);
+                }
+            }
+            return openExternally(uri);
+        }
+
+        @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            if (flag("progressBar", true)) {
+                progressBar.setVisibility(View.VISIBLE);
+            }
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            refreshLayout.setRefreshing(false);
+            progressBar.setVisibility(View.GONE);
+            applyInjections(view);
+            dismissSplash();
+            if (toolbar.getVisibility() == View.VISIBLE
+                    && flag("toolbarUsePageTitle", false)
+                    && view.getTitle() != null) {
+                toolbar.setTitle(view.getTitle());
+            }
+        }
+
+        @Override
+        public void onReceivedError(WebView view, WebResourceRequest request,
+                                    android.webkit.WebResourceError error) {
+            if (!request.isForMainFrame()) return;
+            refreshLayout.setRefreshing(false);
+            progressBar.setVisibility(View.GONE);
+            dismissSplash();
+            String page = offlineHtml.isEmpty() ? defaultOfflinePage() : offlineHtml;
+            view.loadDataWithBaseURL(null, page, "text/html", "UTF-8", null);
+        }
+    }
+
+    private void applyInjections(WebView view) {
+        StringBuilder script = new StringBuilder();
+
+        if (!injectCss.isEmpty() || !flag("textSelection", true)) {
+            String css = injectCss;
+            if (!flag("textSelection", true)) {
+                css += "\n*{-webkit-user-select:none!important;user-select:none!important;"
+                        + "-webkit-touch-callout:none!important;}"
+                        + "input,textarea,[contenteditable]{-webkit-user-select:text!important;"
+                        + "user-select:text!important;}";
+            }
+            script.append("(function(){var s=document.getElementById('packr-css');")
+                    .append("if(!s){s=document.createElement('style');s.id='packr-css';")
+                    .append("document.head.appendChild(s);}s.textContent=")
+                    .append(JSONObject.quote(css))
+                    .append(";})();");
+        }
+
+        // Route blob: downloads back through the app; a plain WebView drops them silently.
+        if (flag("downloads", true)) {
+            script.append("(function(){if(window.__packrBlob)return;window.__packrBlob=1;")
+                    .append("var c=URL.createObjectURL;var seen={};")
+                    .append("document.addEventListener('click',function(e){")
+                    .append("var a=e.target&&e.target.closest?e.target.closest('a[download]'):null;")
+                    .append("if(!a||!a.href||a.href.indexOf('blob:')!==0)return;")
+                    .append("e.preventDefault();var x=new XMLHttpRequest();")
+                    .append("x.open('GET',a.href,true);x.responseType='blob';")
+                    .append("x.onload=function(){var r=new FileReader();")
+                    .append("r.onloadend=function(){PackrDownload.save(r.result,")
+                    .append("a.getAttribute('download')||'');};")
+                    .append("r.readAsDataURL(x.response);};x.send();},true);})();");
+        }
+
+        if (!injectJs.isEmpty()) {
+            script.append("try{").append(injectJs).append("}catch(e){console.error(e);}");
+        }
+
+        if (script.length() > 0) {
+            view.evaluateJavascript(script.toString(), null);
+        }
+    }
+
+    private class HostChromeClient extends WebChromeClient {
+
+        @Override
+        public void onProgressChanged(WebView view, int progress) {
+            if (!flag("progressBar", true)) return;
+            progressBar.setProgress(progress);
+            progressBar.setVisibility(progress >= 100 ? View.GONE : View.VISIBLE);
+        }
+
+        @Override
+        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                         FileChooserParams params) {
+            if (!flag("fileUploads", true)) {
+                callback.onReceiveValue(null);
+                return true;
+            }
+            if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+            filePathCallback = callback;
+            try {
+                fileChooserLauncher.launch(params.createIntent());
+                return true;
+            } catch (ActivityNotFoundException e) {
+                filePathCallback = null;
+                toast(getString(R.string.no_file_picker));
+                return false;
+            }
+        }
+
+        @Override
+        public void onPermissionRequest(PermissionRequest request) {
+            List<String> needed = new ArrayList<>();
+            for (String resource : request.getResources()) {
+                if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                    needed.add(android.Manifest.permission.CAMERA);
+                } else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                    needed.add(android.Manifest.permission.RECORD_AUDIO);
+                }
+            }
+            if (needed.isEmpty() || hasAll(needed)) {
+                request.grant(request.getResources());
+                return;
+            }
+            pendingWebPermission = request;
+            permissionLauncher.launch(needed.toArray(new String[0]));
+        }
+
+        @Override
+        public void onGeolocationPermissionsShowPrompt(String origin,
+                                                       GeolocationPermissions.Callback callback) {
+            String fine = android.Manifest.permission.ACCESS_FINE_LOCATION;
+            if (ContextCompat.checkSelfPermission(MainActivity.this, fine)
+                    == PackageManager.PERMISSION_GRANTED) {
+                callback.invoke(origin, true, false);
+                return;
+            }
+            pendingGeoCallback = callback;
+            pendingGeoOrigin = origin;
+            permissionLauncher.launch(new String[]{fine});
+        }
+    }
+
+    // ------------------------------------------------------------ js bridge
+
+    /** Exposed to the page as window.Packr when the bridge is enabled. */
+    private class Bridge {
+
+        @JavascriptInterface
+        public void toast(String message) {
+            runOnUiThread(() -> MainActivity.this.toast(message));
+        }
+
+        @JavascriptInterface
+        public void share(String textToShare, String url) {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT,
+                        TextUtils.isEmpty(url) ? textToShare : textToShare + " " + url);
+                startActivity(Intent.createChooser(intent, getString(R.string.action_share)));
+            });
+        }
+
+        @JavascriptInterface
+        public void vibrate(int milliseconds) {
+            try {
+                android.os.Vibrator vibrator =
+                        (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (vibrator == null) return;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(
+                            milliseconds, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(milliseconds);
+                }
+            } catch (Exception ignored) {
+                // no vibrator, or no permission
+            }
+        }
+
+        @JavascriptInterface
+        public void openExternal(String url) {
+            runOnUiThread(() -> openExternally(Uri.parse(url)));
+        }
+
+        @JavascriptInterface
+        public void exit() {
+            runOnUiThread(MainActivity.this::finish);
+        }
+
+        @JavascriptInterface
+        public String appVersion() {
+            return BuildConfig.VERSION_NAME;
+        }
+
+        @JavascriptInterface
+        public int appVersionCode() {
+            return BuildConfig.VERSION_CODE;
+        }
+
+        @JavascriptInterface
+        public boolean isOnline() {
+            try {
+                android.net.ConnectivityManager manager =
+                        (android.net.ConnectivityManager) getSystemService(
+                                Context.CONNECTIVITY_SERVICE);
+                if (manager == null) return true;
+                android.net.NetworkInfo info = manager.getActiveNetworkInfo();
+                return info != null && info.isConnected();
+            } catch (Exception e) {
+                return true;
+            }
+        }
+
+        @JavascriptInterface
+        public void setStatusBarColor(String hex) {
+            runOnUiThread(() -> {
+                try {
+                    getWindow().setStatusBarColor(Color.parseColor(hex));
+                } catch (Exception ignored) {
+                    // malformed colour from the page
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void saveFile(String base64OrDataUrl, String fileName) {
+            runOnUiThread(() -> saveDataUrl(base64OrDataUrl, fileName));
+        }
+    }
+
+    private class DownloadBridge {
+        @JavascriptInterface
+        public void save(String dataUrl, String suggestedName) {
+            runOnUiThread(() -> saveDataUrl(dataUrl,
+                    TextUtils.isEmpty(suggestedName)
+                            ? guessName(dataUrl, null, null)
+                            : suggestedName));
+        }
+    }
+
+    // ------------------------------------------------------------- downloads
+
+    private void handleDownload(String url, String userAgent, String contentDisposition,
+                                String mimeType, long contentLength) {
+        if (url.startsWith("blob:")) {
+            webView.evaluateJavascript(blobReaderScript(url), null);
+            return;
+        }
+        if (url.startsWith("data:")) {
+            saveDataUrl(url, guessName(url, contentDisposition, mimeType));
+            return;
+        }
+        try {
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setMimeType(mimeType);
+            request.addRequestHeader("User-Agent", userAgent);
+            String cookies = CookieManager.getInstance().getCookie(url);
+            if (cookies != null) request.addRequestHeader("Cookie", cookies);
+            String name = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            request.setTitle(name);
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            manager.enqueue(request);
+            toast(getString(R.string.download_started, name));
+        } catch (Exception e) {
+            toast(getString(R.string.download_failed));
+        }
+    }
+
+    private String blobReaderScript(String blobUrl) {
+        return "(function(){var x=new XMLHttpRequest();x.open('GET',"
+                + JSONObject.quote(blobUrl)
+                + ",true);x.responseType='blob';x.onload=function(){var r=new FileReader();"
+                + "r.onloadend=function(){PackrDownload.save(r.result,'');};"
+                + "r.readAsDataURL(x.response);};x.send();})();";
+    }
+
+    private void saveDataUrl(String dataUrl, String fileName) {
+        try {
+            int comma = dataUrl.indexOf(',');
+            String payload = comma >= 0 ? dataUrl.substring(comma + 1) : dataUrl;
+            byte[] bytes = Base64.decode(payload, Base64.DEFAULT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveViaMediaStore(bytes, fileName);
+            } else {
+                saveViaFile(bytes, fileName);
+            }
+        } catch (Exception e) {
+            toast(getString(R.string.download_failed));
+        }
+    }
+
+    private void saveViaMediaStore(byte[] bytes, String fileName) throws Exception {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+        values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+        values.put(MediaStore.Downloads.IS_PENDING, 1);
+
+        ContentResolver resolver = getContentResolver();
+        Uri target = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        if (target == null) {
+            toast(getString(R.string.download_failed));
+            return;
+        }
+        try (OutputStream stream = resolver.openOutputStream(target)) {
+            if (stream == null) throw new java.io.IOException("no output stream");
+            stream.write(bytes);
+        }
+        values.clear();
+        values.put(MediaStore.Downloads.IS_PENDING, 0);
+        resolver.update(target, values, null, null);
+        toast(getString(R.string.download_saved, fileName));
+    }
+
+    private void saveViaFile(byte[] bytes, String fileName) throws Exception {
+        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        if (!dir.exists() && !dir.mkdirs()) {
+            toast(getString(R.string.download_failed));
+            return;
+        }
+        File out = uniqueFile(dir, fileName);
+        try (OutputStream stream = new FileOutputStream(out)) {
+            stream.write(bytes);
+        }
+        toast(getString(R.string.download_saved, out.getName()));
+    }
+
+    private File uniqueFile(File dir, String name) {
+        File candidate = new File(dir, name);
+        if (!candidate.exists()) return candidate;
+        String stem = name;
+        String ext = "";
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) {
+            stem = name.substring(0, dot);
+            ext = name.substring(dot);
+        }
+        for (int i = 1; i < 1000; i++) {
+            candidate = new File(dir, stem + "-" + i + ext);
+            if (!candidate.exists()) return candidate;
+        }
+        return candidate;
+    }
+
+    private String guessName(String url, String contentDisposition, String mimeType) {
+        try {
+            String guessed = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            if (guessed != null && !guessed.equals("downloadfile.bin")) return guessed;
+        } catch (Exception ignored) {
+            // fall through to a timestamped name
+        }
+        String ext = mimeType == null
+                ? null
+                : MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+        return "download-" + System.currentTimeMillis() + (ext == null ? "" : "." + ext);
+    }
+
+    // --------------------------------------------------------------- helpers
+
+    private boolean isInternal(Uri uri) {
+        String host = uri.getHost();
+        if (host == null) return true;
+        host = host.toLowerCase();
+        if (host.equals(ASSET_DOMAIN)) return true;
+
+        for (String allowed : internalHosts) {
+            if (host.equals(allowed) || host.endsWith("." + allowed)) return true;
+        }
+        if (internalHosts.isEmpty() && !flag("localMode", false)) {
+            String startHost = Uri.parse(startUrl()).getHost();
+            if (startHost != null) {
+                startHost = startHost.toLowerCase();
+                return host.equals(startHost) || host.endsWith("." + startHost);
+            }
+        }
+        return false;
+    }
+
+    private boolean openExternally(Uri uri) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (ActivityNotFoundException e) {
+            toast(getString(R.string.no_handler));
+        }
+        return true;
+    }
+
+    private void shareCurrentPage() {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_TEXT, webView.getUrl() == null ? startUrl() : webView.getUrl());
+        startActivity(Intent.createChooser(intent, getString(R.string.action_share)));
+    }
+
+    private boolean hasAll(List<String> permissions) {
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String defaultOfflinePage() {
+        return "<!doctype html><html><head><meta name='viewport' "
+                + "content='width=device-width,initial-scale=1'><style>"
+                + "body{font-family:sans-serif;margin:0;display:flex;height:100vh;"
+                + "align-items:center;justify-content:center;text-align:center;padding:24px;"
+                + "box-sizing:border-box;background:#12181F;color:#E7E4DD}"
+                + "h1{font-size:20px;margin:0 0 8px}p{opacity:.7;margin:0 0 20px;font-size:15px}"
+                + "button{font:inherit;padding:12px 22px;border:0;border-radius:6px;"
+                + "background:#00C2B2;color:#08131a;font-weight:600}</style></head><body><div>"
+                + "<h1>" + getString(R.string.offline_title) + "</h1><p>"
+                + getString(R.string.offline_body) + "</p>"
+                + "<button onclick='location.reload()'>"
+                + getString(R.string.offline_retry) + "</button></div></body></html>";
+    }
+
+    private void toast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    // ------------------------------------------------------------- overrides
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && flag("fullscreen", false)) hideSystemBars();
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (flag("fullscreen", false)) hideSystemBars();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        webView.saveState(outState);
+    }
+
+    @Override
+    protected void onPause() {
+        webView.onPause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webView.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (webView != null) {
+            webView.removeAllViews();
+            webView.destroy();
+        }
+        super.onDestroy();
+    }
+}
+</script>
+
+<script type="text/plain" id="tpl-static">===== FILE app/src/main/res/layout/activity_main.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/packr_background">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:max="100"
+        android:indeterminate="false"
+        android:progressTint="@color/packr_progress"
+        android:progressBackgroundTint="@android:color/transparent"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/refresh"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <WebView
+                android:id="@+id/webview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <FrameLayout
+            android:id="@+id/splash"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@color/packr_splash">
+
+            <ImageView
+                android:id="@+id/splash_logo"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/splash_logo" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone" />
+
+</LinearLayout>
+
+===== FILE app/src/main/res/values/themes.xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Packr" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/packr_theme</item>
+        <item name="colorPrimaryDark">@color/packr_status</item>
+        <item name="colorAccent">@color/packr_theme</item>
+        <item name="android:windowBackground">@color/packr_splash</item>
+        <item name="android:statusBarColor">@color/packr_status</item>
+    </style>
+</resources>
+
+===== FILE app/src/main/res/xml/file_paths.xml
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="cache" path="." />
+    <files-path name="files" path="." />
+    <external-files-path name="external_files" path="." />
+    <external-path name="external" path="." />
+</paths>
+
+===== FILE app/proguard-rules.pro
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class org.json.** { *; }
+
+===== FILE gradle.properties
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+org.gradle.parallel=true
+org.gradle.caching=true
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+
+===== FILE build.gradle
+plugins {
+    id 'com.android.application' version '8.7.2' apply false
+}
+
+===== FILE gradle/wrapper/gradle-wrapper.properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.9-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+
+===== FILE .gitignore
+# Build output
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+
+# Signing material -- never commit these
+*.jks
+*.keystore
+keystore.properties
+
+.DS_Store
+.idea/
+*.iml
+
+===== FILE .github/workflows/build-android.yml
+name: Build Android package
+
+# Builds on every push, and on demand from the Actions tab.
+# The GitHub runner already has a JDK and the Android SDK, so nothing
+# needs installing on your own computer.
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the project
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Restore the signing keystore
+        # Only runs when you have added the secrets. Without them the build
+        # still produces an unsigned APK you can inspect, plus a debug APK.
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/signing.jks"
+
+      - name: Grant execute on gradlew
+        run: chmod +x ./gradlew || true
+
+      - name: Build
+        env:
+          PACKR_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' && format('{0}/signing.jks', runner.temp) || '' }}
+          PACKR_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PACKR_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PACKR_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -f ./gradlew ]; then
+            ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace
+          else
+            gradle wrapper --gradle-version 8.9
+            ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace
+          fi
+
+      - name: Upload the installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+
+      - name: Upload the Play Store bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab
+          path: app/build/outputs/bundle/**/*.aab
+          if-no-files-found: warn
+</script>
+
+<script type="text/plain" id="tpl-manifest"><?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+{{PERMISSIONS}}
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="{{CLEARTEXT}}"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.Packr">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode|density|fontScale"
+            android:screenOrientation="{{ORIENTATION}}"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+{{DEEP_LINKS}}        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="{{PACKAGE_ID}}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>
+</script>
+
+<script type="text/plain" id="tpl-app-gradle">plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace '{{PACKAGE_ID}}'
+    compileSdk {{COMPILE_SDK}}
+
+    defaultConfig {
+        applicationId "{{PACKAGE_ID}}"
+        minSdk {{MIN_SDK}}
+        targetSdk {{TARGET_SDK}}
+        versionCode {{VERSION_CODE}}
+        versionName "{{VERSION_NAME}}"
+    }
+
+    // Signing is supplied from outside the project so no secret is ever committed.
+    // Locally:  ./gradlew assembleRelease -PPACKR_KEYSTORE=... -PPACKR_STORE_PASSWORD=...
+    // On CI:    the workflow passes them as environment variables.
+    def keystorePath = project.findProperty('PACKR_KEYSTORE') ?: System.getenv('PACKR_KEYSTORE')
+    def hasKeystore = keystorePath != null && !keystorePath.toString().isEmpty() && file(keystorePath).exists()
+
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile file(keystorePath)
+                storePassword project.findProperty('PACKR_STORE_PASSWORD') ?: System.getenv('PACKR_STORE_PASSWORD') ?: ''
+                keyAlias project.findProperty('PACKR_KEY_ALIAS') ?: System.getenv('PACKR_KEY_ALIAS') ?: ''
+                keyPassword project.findProperty('PACKR_KEY_PASSWORD') ?: System.getenv('PACKR_KEY_PASSWORD') ?: ''
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.browser:browser:1.8.0'
+}
+</script>
+
+<script type="text/plain" id="tpl-readme"># {{APP_NAME}}
+
+An Android app generated by Packr. Everything about how it looks and behaves is
+in **`app/src/main/assets/packr/config.json`** — edit that file and rebuild, no
+Java changes needed.
+
+## Build it
+
+### On GitHub, with no tools installed
+
+Push this folder to a repository. The workflow in `.github/workflows/` builds it
+on every push. Open the **Actions** tab, click the newest run, and download the
+`apk` artifact from the bottom of the page.
+
+To produce a signed release, add three repository secrets under
+*Settings → Secrets and variables → Actions*:
+
+| Secret | What goes in it |
+| --- | --- |
+| `KEYSTORE_BASE64` | Your keystore file, base64 encoded |
+| `KEYSTORE_PASSWORD` | The keystore password |
+| `KEY_ALIAS` | The key alias |
+| `KEY_PASSWORD` | The key password |
+
+Encode the keystore with:
+
+```
+base64 -w0 my-upload.jks > keystore.txt      # Linux and macOS
+certutil -encode my-upload.jks keystore.txt  # Windows
+```
+
+### In Android Studio
+
+Open this folder. Wait for the sync to finish, then Run.
+
+### From a terminal
+
+```
+./gradlew assembleRelease
+```
+
+The APK lands in `app/build/outputs/apk/release/`.
+
+## Make a signing key
+
+```
+keytool -genkeypair -v -keystore my-upload.jks -alias upload \
+  -keyalg RSA -keysize 2048 -validity 10950 -storetype PKCS12
+```
+
+**Back this file up in more than one place.** If you publish to Play and then
+lose the key, you can never update that app. There is no recovery process.
+
+## Change how the app behaves
+
+`app/src/main/assets/packr/config.json` controls colours, the toolbar, the
+splash screen, bottom navigation, permissions behaviour, link handling and
+more. `inject.css` and `inject.js` in the same folder run on every page.
+
+Reopen your settings in Packr by loading `packr.json` from the root of this
+project.
+</script>
+
+<script>
+"use strict";
+/* ===================================================================
+   Packr — generates a complete Android project in the browser.
+   No build step, no dependencies. Edit and commit this file directly.
+   =================================================================== */
+
+// ---------------------------------------------------------------- state
+
+var DEFAULTS = {
+  source:   { mode:"files", url:"" },
+  identity: { appName:"", packageId:"", versionName:"1.0.0", versionCode:1,
+              minSdk:"24", targetSdk:"35", compileSdk:"35" },
+  look:     { iconBackground:"#12181F", themeColor:"#12181F", statusBarColor:"#12181F",
+              navBarColor:"#12181F", backgroundColor:"#FFFFFF", progressColor:"#00C2B2",
+              refreshColor:"#00C2B2", statusBarLightIcons:true, orientation:"unspecified",
+              darkMode:"system", forceWebViewDark:false, fullscreen:false, overscroll:true },
+  chrome:   { splash:true, splashColor:"#12181F", splashMinMs:600,
+              toolbar:false, toolbarTitle:"", toolbarColor:"#12181F", toolbarTextColor:"#FFFFFF",
+              toolbarUsePageTitle:false, toolbarRefresh:true, toolbarShare:false,
+              toolbarOpenInBrowser:false,
+              bottomNavColor:"#12181F", bottomNavTextColor:"#FFFFFF", hasNav:false,
+              progressBar:true, pullToRefresh:false },
+  behaviour:{ externalMode:"browser", backMode:"history", internalHosts:"",
+              permCamera:false, permMicrophone:false, permLocation:false,
+              permNotifications:false, permVibrate:false,
+              downloads:true, fileUploads:true, zoom:false, textSelection:true,
+              longPress:true, keepScreenOn:false, blockScreenshots:false,
+              cacheMode:"-1", cookieMode:"all", cleartext:false, allowMixedContent:false },
+  code:     { css:"", js:"", jsBridge:false, userAgent:"", userAgentSuffix:"", offlineHtml:"" },
+  build:    { route:"github" }
+};
+
+var S = JSON.parse(JSON.stringify(DEFAULTS));
+var navItems = [];
+var webFiles = [];      // { path, bytes:Uint8Array }
+var iconImage = null;   // HTMLImageElement
+var splashImage = null;
+
+var TABS = ["Source","Identity","Look","Chrome","Behaviour","Code","Build"];
+
+function $(id) { return document.getElementById(id); }
+function get(path) {
+  return path.split(".").reduce(function (o, k) { return o == null ? o : o[k]; }, S);
+}
+function set(path, value) {
+  var keys = path.split("."), last = keys.pop();
+  keys.reduce(function (o, k) { return o[k]; }, S)[last] = value;
+}
+
+// ------------------------------------------------------------------ tabs
+
+function buildTabs() {
+  var nav = $("tabs");
+  TABS.forEach(function (name, index) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.textContent = name;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(index === 0));
+    button.addEventListener("click", function () { openTab(name); });
+    nav.appendChild(button);
+  });
+  openTab(TABS[0]);
+}
+
+function openTab(name) {
+  Array.prototype.forEach.call($("tabs").children, function (button) {
+    button.setAttribute("aria-selected", String(button.textContent === name));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".panel"), function (panel) {
+    panel.setAttribute("data-open", String(panel.getAttribute("data-tab") === name));
+  });
+}
+
+// -------------------------------------------------------------- bindings
+
+function bindAll() {
+  // text, number, colour, select, textarea
+  Array.prototype.forEach.call(document.querySelectorAll("[data-bind]"), function (element) {
+    var path = element.getAttribute("data-bind");
+
+    if (element.classList.contains("sw")) {
+      element.setAttribute("aria-pressed", String(Boolean(get(path))));
+      element.addEventListener("click", function () {
+        var next = element.getAttribute("aria-pressed") !== "true";
+        element.setAttribute("aria-pressed", String(next));
+        set(path, next);
+        afterChange();
+      });
+      return;
+    }
+
+    element.value = get(path);
+    element.addEventListener("input", function () {
+      var value = element.value;
+      if (element.type === "number") value = Number(value);
+      set(path, value);
+      afterChange();
+    });
+    element.addEventListener("change", function () {
+      set(path, element.type === "number" ? Number(element.value) : element.value);
+      afterChange();
+    });
+  });
+
+  // segmented choices
+  Array.prototype.forEach.call(document.querySelectorAll("[data-seg]"), function (wrap) {
+    var path = wrap.getAttribute("data-seg");
+    Array.prototype.forEach.call(wrap.querySelectorAll(".seg"), function (button) {
+      button.setAttribute("aria-pressed", String(button.getAttribute("data-value") === get(path)));
+      button.addEventListener("click", function () {
+        set(path, button.getAttribute("data-value"));
+        Array.prototype.forEach.call(wrap.querySelectorAll(".seg"), function (other) {
+          other.setAttribute("aria-pressed", String(other === button));
+        });
+        afterChange();
+      });
+    });
+  });
+}
+
+/** Show or hide any element carrying data-when="path=value". */
+function applyConditionals() {
+  Array.prototype.forEach.call(document.querySelectorAll("[data-when]"), function (element) {
+    var parts = element.getAttribute("data-when").split("=");
+    element.hidden = String(get(parts[0])) !== parts[1];
+  });
+}
+
+function refreshControls() {
+  Array.prototype.forEach.call(document.querySelectorAll("[data-bind]"), function (element) {
+    var value = get(element.getAttribute("data-bind"));
+    if (element.classList.contains("sw")) {
+      element.setAttribute("aria-pressed", String(Boolean(value)));
+    } else {
+      element.value = value;
+    }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-seg]"), function (wrap) {
+    var value = get(wrap.getAttribute("data-seg"));
+    Array.prototype.forEach.call(wrap.querySelectorAll(".seg"), function (button) {
+      button.setAttribute("aria-pressed", String(button.getAttribute("data-value") === value));
+    });
+  });
+}
+
+// -------------------------------------------------------- bottom nav rows
+
+function renderNavRows() {
+  var host = $("nav-rows");
+  host.innerHTML = "";
+  navItems.forEach(function (item, index) {
+    var row = document.createElement("div");
+    row.className = "row";
+
+    var label = document.createElement("input");
+    label.type = "text";
+    label.placeholder = "Label";
+    label.value = item.label;
+    label.addEventListener("input", function () { item.label = label.value; afterChange(); });
+
+    var url = document.createElement("input");
+    url.type = "text";
+    url.placeholder = S.source.mode === "files" ? "reports.html" : "https://example.org/reports";
+    url.value = item.url;
+    url.addEventListener("input", function () { item.url = url.value; afterChange(); });
+
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", function () {
+      navItems.splice(index, 1);
+      renderNavRows();
+      afterChange();
+    });
+
+    row.appendChild(label);
+    row.appendChild(url);
+    row.appendChild(remove);
+    host.appendChild(row);
+  });
+  S.chrome.hasNav = navItems.length > 0;
+}
+
+$("add-nav").addEventListener("click", function () {
+  if (navItems.length >= 5) return;
+  navItems.push({ label:"", url:"" });
+  renderNavRows();
+  afterChange();
+});
+
+// ---------------------------------------------------------------- guards
+
+function suggestPackageId(name) {
+  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (!slug) return "";
+  if (/^[0-9]/.test(slug)) slug = "app" + slug;
+  return "org.example." + slug;
+}
+
+var JAVA_WORDS = ("abstract assert boolean break byte case catch char class const continue default do " +
+  "double else enum extends final finally float for goto if implements import instanceof int interface " +
+  "long native new package private protected public return short static strictfp super switch " +
+  "synchronized this throw throws transient try void volatile while true false null").split(" ");
+
+function problems() {
+  var out = [];
+  if (S.source.mode === "url") {
+    if (!/^https?:\/\/.+/i.test(S.source.url)) out.push("Enter a web address starting with https:// or http://");
+  } else if (!webFiles.length) {
+    out.push("Choose the HTML folder or files to bundle.");
+  } else if (!webFiles.some(function (f) { return /(^|\/)index\.html?$/i.test(f.path); })) {
+    out.push("No index.html among the chosen files — the app would open to a blank screen.");
+  }
+
+  if (!S.identity.appName.trim()) out.push("Enter an app name.");
+
+  var id = S.identity.packageId.trim();
+  if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(id)) {
+    out.push("The package ID needs at least two lowercase parts separated by dots, like jm.org.cestis.payroll");
+  } else if (id.split(".").some(function (part) { return JAVA_WORDS.indexOf(part) >= 0; })) {
+    out.push("The package ID contains a reserved Java word. Rename that part.");
+  }
+
+  if (!/^\d+(\.\d+){0,3}$/.test(String(S.identity.versionName))) out.push("The version name should look like 1.0.0");
+  if (!(S.identity.versionCode >= 1)) out.push("The version code must be a whole number, 1 or higher.");
+
+  if (navItems.length && navItems.some(function (i) { return !i.label.trim() || !i.url.trim(); })) {
+    out.push("Every bottom navigation item needs both a label and a target.");
+  }
+  return out;
+}
+
+function showNotes() {
+  var idNote = $("id-note");
+  var id = S.identity.packageId.trim();
+  if (!id) { idNote.textContent = ""; idNote.removeAttribute("data-tone"); }
+  else if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(id)) {
+    idNote.setAttribute("data-tone", "bad");
+    idNote.textContent = "Needs at least two lowercase parts separated by dots.";
+  } else if (id.indexOf("org.example.") === 0) {
+    idNote.setAttribute("data-tone", "warn");
+    idNote.textContent = "org.example is a placeholder. Change it to a domain you control before publishing.";
+  } else {
+    idNote.setAttribute("data-tone", "ok");
+    idNote.textContent = "Valid, and permanent once published.";
+  }
+
+  var urlNote = $("url-note");
+  if (S.source.mode === "url" && S.source.url) {
+    if (/^https:\/\//i.test(S.source.url)) {
+      urlNote.setAttribute("data-tone", "ok");
+      urlNote.textContent = "Loaded on every launch.";
+    } else if (/^http:\/\//i.test(S.source.url)) {
+      urlNote.setAttribute("data-tone", "warn");
+      urlNote.textContent = "Plain http. Packr will switch on cleartext traffic for you, but use https where you can.";
+      S.behaviour.cleartext = true;
+    } else {
+      urlNote.setAttribute("data-tone", "bad");
+      urlNote.textContent = "Start with https:// or http://";
+    }
+  } else { urlNote.textContent = ""; }
+
+  var route = $("route-note");
+  if (S.build.route === "github") {
+    route.setAttribute("data-tone", "ok");
+    route.textContent = "Nothing to install. Push the folder to a repository, open the Actions tab, and download the APK from the finished run.";
+  } else if (S.build.route === "studio") {
+    route.setAttribute("data-tone", "");
+    route.textContent = "Open the unzipped folder in Android Studio. It downloads the SDK pieces it needs on first sync.";
+  } else {
+    route.setAttribute("data-tone", "");
+    route.textContent = "Needs a JDK 17+ and the Android SDK with ANDROID_HOME set. Run gradlew assembleRelease in the folder.";
+  }
+
+  var steps = $("signing-steps");
+  steps.textContent = S.build.route === "github"
+    ? "1. keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10950 -storetype PKCS12    2. base64 -w0 upload.jks > keystore.txt    3. Paste that into a repository secret named KEYSTORE_BASE64, plus KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD."
+    : "keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10950 -storetype PKCS12    then build with -PPACKR_KEYSTORE=upload.jks -PPACKR_STORE_PASSWORD=... -PPACKR_KEY_ALIAS=upload -PPACKR_KEY_PASSWORD=...";
+}
+
+function showErrors(list) {
+  var box = $("errors");
+  box.innerHTML = list.length
+    ? "<ul>" + list.map(function (item) {
+        var d = document.createElement("li"); d.textContent = item; return d.outerHTML;
+      }).join("") + "</ul>"
+    : "";
+}
+
+// --------------------------------------------------------------- preview
+
+function renderPreview() {
+  $("pv-status").style.background = S.look.statusBarColor;
+  $("pv-status").style.color = S.look.statusBarLightIcons ? "#fff" : "#000";
+
+  var bar = $("pv-bar");
+  bar.hidden = !S.chrome.toolbar;
+  bar.style.display = S.chrome.toolbar ? "flex" : "none";
+  bar.style.background = S.chrome.toolbarColor;
+  bar.style.color = S.chrome.toolbarTextColor;
+  bar.textContent = S.chrome.toolbarUsePageTitle
+    ? "Page title"
+    : (S.chrome.toolbarTitle || S.identity.appName || "App");
+
+  var prog = $("pv-prog");
+  prog.style.display = S.chrome.progressBar ? "block" : "none";
+  prog.style.background = "linear-gradient(90deg," + S.look.progressColor + " 62%,transparent 62%)";
+
+  var body = $("pv-body");
+  body.style.background = S.look.backgroundColor;
+  body.style.color = readableOn(S.look.backgroundColor);
+
+  var nav = $("pv-nav");
+  nav.innerHTML = "";
+  if (navItems.length) {
+    nav.style.display = "flex";
+    nav.style.background = S.chrome.bottomNavColor;
+    navItems.forEach(function (item) {
+      var cell = document.createElement("span");
+      cell.textContent = item.label || "Item";
+      cell.style.color = S.chrome.bottomNavTextColor;
+      nav.appendChild(cell);
+    });
+  } else {
+    nav.style.display = "none";
+  }
+
+  var splash = $("pv-splash");
+  splash.style.background = S.chrome.splashColor;
+  $("pv-splash-img").src = splashImage ? splashImage.src : (iconImage ? iconImage.src : placeholderIconUrl());
+
+  $("pv-caption").textContent = S.look.fullscreen ? "Preview · fullscreen hides the bars" : "Preview";
+  $("phone").style.opacity = S.look.fullscreen ? ".92" : "1";
+}
+
+function readableOn(hex) {
+  var rgb = hexToRgb(hex);
+  var luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+  return luminance > 0.6 ? "#12181F" : "#E7E4DD";
+}
+function hexToRgb(hex) {
+  var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return [18, 24, 31];
+  var v = parseInt(m[1], 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+$("show-splash").addEventListener("click", function () {
+  $("pv-splash").hidden = false;
+  $("show-splash").setAttribute("aria-pressed", "true");
+  $("show-page").setAttribute("aria-pressed", "false");
+});
+$("show-page").addEventListener("click", function () {
+  $("pv-splash").hidden = true;
+  $("show-splash").setAttribute("aria-pressed", "false");
+  $("show-page").setAttribute("aria-pressed", "true");
+});
+
+function afterChange() {
+  if (!S.identity.packageId && S.identity.appName) {
+    S.identity.packageId = suggestPackageId(S.identity.appName);
+    var field = document.querySelector('[data-bind="identity.packageId"]');
+    if (field) field.value = S.identity.packageId;
+  }
+  S.chrome.hasNav = navItems.length > 0;
+  applyConditionals();
+  showNotes();
+  renderPreview();
+  $("meta").textContent = (S.identity.appName || "untitled") + " · " +
+    (S.identity.packageId || "no package id") + " · " + S.identity.versionName;
+}
+
+// ------------------------------------------------------------ file input
+
+function readFile(file) {
+  return new Promise(function (resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function () { resolve(new Uint8Array(reader.result)); };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+var WEB_EXT = ("html htm css js mjs json map txt xml svg png jpg jpeg gif webp avif ico woff woff2 " +
+  "ttf otf eot mp3 mp4 webm ogg wav m4a pdf csv wasm webmanifest").split(" ");
+
+function acceptWebFiles(fileList, stripRoot) {
+  var picked = Array.prototype.slice.call(fileList);
+  var skipped = 0;
+  var jobs = [];
+
+  picked.forEach(function (file) {
+    var relative = file.webkitRelativePath || file.name;
+    if (stripRoot && relative.indexOf("/") >= 0) {
+      relative = relative.split("/").slice(1).join("/");
+    }
+    if (!relative) return;
+    if (/(^|\/)(node_modules|\.git|\.github)\//.test(relative)) { skipped++; return; }
+    var ext = (relative.split(".").pop() || "").toLowerCase();
+    if (WEB_EXT.indexOf(ext) < 0) { skipped++; return; }
+    jobs.push(readFile(file).then(function (bytes) { return { path: relative, bytes: bytes }; }));
+  });
+
+  return Promise.all(jobs).then(function (results) {
+    webFiles = results;
+    var total = results.reduce(function (sum, f) { return sum + f.bytes.length; }, 0);
+    var note = $("files-note");
+    var hasIndex = results.some(function (f) { return /(^|\/)index\.html?$/i.test(f.path); });
+    note.setAttribute("data-tone", results.length === 0 ? "bad" : hasIndex ? "ok" : "warn");
+    note.textContent = results.length === 0
+      ? "Nothing usable was selected."
+      : results.length + " file(s), " + (total / 1024).toFixed(0) + " KB" +
+        (skipped ? ", " + skipped + " skipped" : "") +
+        (hasIndex ? ". index.html found." : ". No index.html — add one at the top level.");
+    afterChange();
+  });
+}
+
+$("pick-folder").addEventListener("change", function (e) { acceptWebFiles(e.target.files, true); });
+$("pick-files").addEventListener("change", function (e) { acceptWebFiles(e.target.files, false); });
+
+function loadImageFile(file) {
+  return new Promise(function (resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var image = new Image();
+      image.onload = function () { resolve(image); };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$("pick-icon").addEventListener("change", function (e) {
+  if (!e.target.files[0]) return;
+  loadImageFile(e.target.files[0]).then(function (image) { iconImage = image; afterChange(); });
+});
+$("pick-splash").addEventListener("change", function (e) {
+  if (!e.target.files[0]) return;
+  loadImageFile(e.target.files[0]).then(function (image) { splashImage = image; afterChange(); });
+});
+
+// ----------------------------------------------------------------- icons
+
+function drawPlaceholder(context, size, background, ink) {
+  var r = size * 0.22;
+  context.fillStyle = background;
+  roundRect(context, 0, 0, size, size, r);
+  context.fill();
+
+  var stroke = size * 0.085, cx = size / 2, reach = size * 0.19;
+  var top = size * 0.24, tip = size * 0.56, tray = size * 0.74;
+  context.strokeStyle = ink;
+  context.lineWidth = stroke;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+  context.moveTo(cx, top);
+  context.lineTo(cx, tip);
+  context.moveTo(cx - reach, tip - reach);
+  context.lineTo(cx, tip);
+  context.lineTo(cx + reach, tip - reach);
+  context.stroke();
+  context.beginPath();
+  context.moveTo(cx - reach * 1.35, tray);
+  context.lineTo(cx + reach * 1.35, tray);
+  context.stroke();
+}
+
+function roundRect(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function renderIcon(size, kind) {
+  var canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  var context = canvas.getContext("2d");
+  var image = kind === "splash" ? (splashImage || iconImage) : iconImage;
+
+  if (kind === "foreground") {
+    // Adaptive icons only guarantee the middle 66% is visible.
+    if (image) {
+      var inner = size * 0.62;
+      drawContained(context, image, (size - inner) / 2, (size - inner) / 2, inner);
+    } else {
+      var c2 = document.createElement("canvas");
+      c2.width = c2.height = size;
+      drawPlaceholder(c2.getContext("2d"), size, "rgba(0,0,0,0)", "#00C2B2");
+      context.drawImage(c2, 0, 0);
+    }
+  } else if (kind === "splash") {
+    if (image) drawContained(context, image, 0, 0, size);
+    else drawPlaceholder(context, size, "rgba(0,0,0,0)", "#00C2B2");
+  } else {
+    if (image) {
+      context.fillStyle = S.look.iconBackground;
+      if (kind === "round") { context.beginPath(); context.arc(size/2, size/2, size/2, 0, Math.PI*2); context.fill(); }
+      else { roundRect(context, 0, 0, size, size, size * 0.22); context.fill(); }
+      var pad = size * 0.14;
+      drawContained(context, image, pad, pad, size - pad * 2);
+    } else {
+      drawPlaceholder(context, size, S.look.iconBackground, "#00C2B2");
+    }
+  }
+  return canvasBytes(canvas);
+}
+
+function drawContained(context, image, x, y, box) {
+  var scale = Math.min(box / image.width, box / image.height);
+  var w = image.width * scale, h = image.height * scale;
+  context.drawImage(image, x + (box - w) / 2, y + (box - h) / 2, w, h);
+}
+
+function canvasBytes(canvas) {
+  return new Promise(function (resolve) {
+    canvas.toBlob(function (blob) {
+      blob.arrayBuffer().then(function (buffer) { resolve(new Uint8Array(buffer)); });
+    }, "image/png");
+  });
+}
+
+function placeholderIconUrl() {
+  var canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 192;
+  drawPlaceholder(canvas.getContext("2d"), 192, S.look.iconBackground, "#00C2B2");
+  return canvas.toDataURL();
+}
+
+// ------------------------------------------------------------------- zip
+
+var CRC_TABLE = (function () {
+  var table = new Uint32Array(256);
+  for (var i = 0; i < 256; i++) {
+    var c = i;
+    for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  var crc = 0xFFFFFFFF;
+  for (var i = 0; i < bytes.length; i++) {
+    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function deflateRaw(bytes) {
+  if (typeof CompressionStream === "undefined") return Promise.resolve(null);
+  try {
+    var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    return new Response(stream).arrayBuffer().then(function (buffer) {
+      return new Uint8Array(buffer);
+    }).catch(function () { return null; });
+  } catch (e) {
+    return Promise.resolve(null);
+  }
+}
+
+function dosTime(date) {
+  var time = (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() / 2);
+  var day = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { time: time & 0xFFFF, date: day & 0xFFFF };
+}
+
+async function makeZip(entries) {
+  var encoder = new TextEncoder();
+  var stamp = dosTime(new Date());
+  var parts = [], central = [], offset = 0;
+
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    var nameBytes = encoder.encode(entry.path);
+    var raw = entry.bytes;
+    var crc = crc32(raw);
+    var method = 0, body = raw;
+
+    if (raw.length > 200) {
+      var squeezed = await deflateRaw(raw);
+      if (squeezed && squeezed.length < raw.length) { body = squeezed; method = 8; }
+    }
+
+    var local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, 0x0800, true);      // UTF-8 names
+    local.setUint16(8, method, true);
+    local.setUint16(10, stamp.time, true);
+    local.setUint16(12, stamp.date, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, body.length, true);
+    local.setUint32(22, raw.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    local.setUint16(28, 0, true);
+
+    parts.push(new Uint8Array(local.buffer), nameBytes, body);
+
+    var dir = new DataView(new ArrayBuffer(46));
+    dir.setUint32(0, 0x02014b50, true);
+    dir.setUint16(4, 20, true);
+    dir.setUint16(6, 20, true);
+    dir.setUint16(8, 0x0800, true);
+    dir.setUint16(10, method, true);
+    dir.setUint16(12, stamp.time, true);
+    dir.setUint16(14, stamp.date, true);
+    dir.setUint32(16, crc, true);
+    dir.setUint32(20, body.length, true);
+    dir.setUint32(24, raw.length, true);
+    dir.setUint16(28, nameBytes.length, true);
+    dir.setUint32(42, offset, true);
+    central.push(new Uint8Array(dir.buffer), nameBytes);
+
+    offset += 30 + nameBytes.length + body.length;
+  }
+
+  var centralSize = central.reduce(function (sum, p) { return sum + p.length; }, 0);
+  var end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, entries.length, true);
+  end.setUint16(10, entries.length, true);
+  end.setUint32(12, centralSize, true);
+  end.setUint32(16, offset, true);
+
+  return new Blob(parts.concat(central, [new Uint8Array(end.buffer)]),
+    { type: "application/zip" });
+}
+
+// ------------------------------------------------------------- templates
+
+function template(id) { return $(id).textContent; }
+
+function fill(text, tokens) {
+  return Object.keys(tokens).reduce(function (out, key) {
+    return out.split("{{" + key + "}}").join(tokens[key]);
+  }, text);
+}
+
+function staticTemplates() {
+  var blocks = template("tpl-static").split(/^===== FILE /m).slice(1);
+  return blocks.map(function (block) {
+    var newline = block.indexOf("\n");
+    return { path: block.slice(0, newline).trim(), text: block.slice(newline + 1).replace(/\s+$/, "") + "\n" };
+  });
+}
+
+function xmlEscape(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+var PERMISSION_XML = {
+  permCamera: '    <uses-permission android:name="android.permission.CAMERA" />\n' +
+              '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n',
+  permMicrophone: '    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n',
+  permLocation: '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n' +
+                '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n',
+  permNotifications: '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n',
+  permVibrate: '    <uses-permission android:name="android.permission.VIBRATE" />\n'
+};
+
+function runtimeConfig(entry) {
+  return {
+    localMode: S.source.mode === "files",
+    startUrl: S.source.url,
+    entry: entry,
+    internalHosts: S.behaviour.internalHosts.split(",")
+      .map(function (h) { return h.trim().toLowerCase(); })
+      .filter(Boolean),
+
+    themeColor: S.look.themeColor,
+    statusBarColor: S.look.statusBarColor,
+    navBarColor: S.look.navBarColor,
+    backgroundColor: S.look.backgroundColor,
+    refreshColor: S.look.refreshColor,
+    statusBarLightIcons: S.look.statusBarLightIcons,
+    darkMode: S.look.darkMode,
+    forceWebViewDark: S.look.forceWebViewDark,
+    orientation: S.look.orientation,
+    fullscreen: S.look.fullscreen,
+    overscroll: S.look.overscroll,
+
+    splash: S.chrome.splash,
+    splashColor: S.chrome.splashColor,
+    splashMinMs: Number(S.chrome.splashMinMs) || 0,
+    toolbar: S.chrome.toolbar,
+    toolbarTitle: S.chrome.toolbarTitle || S.identity.appName,
+    toolbarColor: S.chrome.toolbarColor,
+    toolbarTextColor: S.chrome.toolbarTextColor,
+    toolbarUsePageTitle: S.chrome.toolbarUsePageTitle,
+    toolbarRefresh: S.chrome.toolbarRefresh,
+    toolbarShare: S.chrome.toolbarShare,
+    toolbarOpenInBrowser: S.chrome.toolbarOpenInBrowser,
+    bottomNav: navItems.filter(function (i) { return i.label && i.url; }),
+    bottomNavColor: S.chrome.bottomNavColor,
+    bottomNavTextColor: S.chrome.bottomNavTextColor,
+    progressBar: S.chrome.progressBar,
+    pullToRefresh: S.chrome.pullToRefresh,
+
+    externalMode: S.behaviour.externalMode,
+    backMode: S.behaviour.backMode,
+    downloads: S.behaviour.downloads,
+    fileUploads: S.behaviour.fileUploads,
+    zoom: S.behaviour.zoom,
+    textSelection: S.behaviour.textSelection,
+    longPress: S.behaviour.longPress,
+    keepScreenOn: S.behaviour.keepScreenOn,
+    blockScreenshots: S.behaviour.blockScreenshots,
+    cacheMode: Number(S.behaviour.cacheMode),
+    cookies: S.behaviour.cookieMode !== "none",
+    thirdPartyCookies: S.behaviour.cookieMode === "all",
+    allowMixedContent: S.behaviour.allowMixedContent,
+    javascript: true,
+
+    jsBridge: S.code.jsBridge,
+    userAgent: S.code.userAgent,
+    userAgentSuffix: S.code.userAgentSuffix,
+    remoteDebugging: true
+  };
+}
+
+async function buildProject() {
+  var encoder = new TextEncoder();
+  var files = [];
+  var text = function (path, body) { files.push({ path: path, bytes: encoder.encode(body) }); };
+
+  var id = S.identity.packageId.trim();
+  var packagePath = id.split(".").join("/");
+  var entry = "index.html";
+  if (S.source.mode === "files") {
+    var found = webFiles.filter(function (f) { return /(^|\/)index\.html?$/i.test(f.path); })
+      .sort(function (a, b) { return a.path.length - b.path.length; })[0];
+    if (found) entry = found.path;
+  }
+
+  var tokens = {
+    PACKAGE_ID: id,
+    APP_NAME: S.identity.appName,
+    VERSION_NAME: S.identity.versionName,
+    VERSION_CODE: String(S.identity.versionCode),
+    MIN_SDK: S.identity.minSdk,
+    TARGET_SDK: S.identity.targetSdk,
+    COMPILE_SDK: S.identity.compileSdk,
+    ORIENTATION: S.look.orientation,
+    CLEARTEXT: String(Boolean(S.behaviour.cleartext)),
+    PERMISSIONS: Object.keys(PERMISSION_XML)
+      .filter(function (key) { return S.behaviour[key]; })
+      .map(function (key) { return PERMISSION_XML[key]; }).join(""),
+    DEEP_LINKS: ""
+  };
+
+  // Static blocks, straight from the editable templates above.
+  staticTemplates().forEach(function (block) { text(block.path, fill(block.text, tokens)); });
+
+  text("settings.gradle",
+    "pluginManagement {\n    repositories {\n        google()\n        mavenCentral()\n" +
+    "        gradlePluginPortal()\n    }\n}\ndependencyResolutionManagement {\n" +
+    "    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n" +
+    "    repositories {\n        google()\n        mavenCentral()\n    }\n}\n" +
+    "rootProject.name = \"packr-app\"\ninclude ':app'\n");
+
+  text("app/build.gradle", fill(template("tpl-app-gradle"), tokens));
+  text("app/src/main/AndroidManifest.xml", fill(template("tpl-manifest"), tokens));
+  text("app/src/main/java/" + packagePath + "/MainActivity.java",
+       fill(template("tpl-java"), tokens));
+  text("README.md", fill(template("tpl-readme"), tokens));
+
+  // Generated resources.
+  text("app/src/main/res/values/strings.xml",
+    '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n' +
+    '    <string name="app_name">' + xmlEscape(S.identity.appName) + '</string>\n' +
+    '    <string name="action_reload">Reload</string>\n' +
+    '    <string name="action_share">Share</string>\n' +
+    '    <string name="action_open_browser">Open in browser</string>\n' +
+    '    <string name="download_started">Downloading %1$s</string>\n' +
+    '    <string name="download_saved">Saved %1$s to Downloads</string>\n' +
+    '    <string name="download_failed">Could not save that file.</string>\n' +
+    '    <string name="no_file_picker">No app on this device can pick files.</string>\n' +
+    '    <string name="no_handler">No app on this device can open that link.</string>\n' +
+    '    <string name="link_blocked">That link is outside this app.</string>\n' +
+    '    <string name="press_again_to_exit">Press back again to leave</string>\n' +
+    '    <string name="confirm_exit">Leave the app?</string>\n' +
+    '    <string name="stay">Stay</string>\n' +
+    '    <string name="leave">Leave</string>\n' +
+    '    <string name="offline_title">Can\\\'t reach the page</string>\n' +
+    '    <string name="offline_body">Check your connection, then try again.</string>\n' +
+    '    <string name="offline_retry">Try again</string>\n</resources>\n');
+
+  text("app/src/main/res/values/colors.xml",
+    '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n' +
+    '    <color name="packr_theme">' + S.look.themeColor + '</color>\n' +
+    '    <color name="packr_status">' + S.look.statusBarColor + '</color>\n' +
+    '    <color name="packr_splash">' + S.chrome.splashColor + '</color>\n' +
+    '    <color name="packr_background">' + S.look.backgroundColor + '</color>\n' +
+    '    <color name="packr_progress">' + S.look.progressColor + '</color>\n' +
+    '    <color name="packr_icon_background">' + S.look.iconBackground + '</color>\n' +
+    '</resources>\n');
+
+  text("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    '<?xml version="1.0" encoding="utf-8"?>\n' +
+    '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n' +
+    '    <background android:drawable="@color/packr_icon_background" />\n' +
+    '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n</adaptive-icon>\n');
+  text("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    '<?xml version="1.0" encoding="utf-8"?>\n' +
+    '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n' +
+    '    <background android:drawable="@color/packr_icon_background" />\n' +
+    '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n</adaptive-icon>\n');
+
+  text("app/src/main/res/xml/network_security_config.xml",
+    '<?xml version="1.0" encoding="utf-8"?>\n<network-security-config>\n' +
+    '    <base-config cleartextTrafficPermitted="' + Boolean(S.behaviour.cleartext) + '">\n' +
+    '        <trust-anchors>\n            <certificates src="system" />\n' +
+    '        </trust-anchors>\n    </base-config>\n</network-security-config>\n');
+
+  // Runtime configuration -- this is the file to edit later.
+  text("app/src/main/assets/packr/config.json",
+       JSON.stringify(runtimeConfig(entry), null, 2) + "\n");
+  text("app/src/main/assets/packr/inject.css", S.code.css || "");
+  text("app/src/main/assets/packr/inject.js", S.code.js || "");
+  text("app/src/main/assets/packr/offline.html", S.code.offlineHtml || "");
+
+  // Settings, so this project can be reopened in Packr.
+  text("packr.json", JSON.stringify({ settings: S, navItems: navItems }, null, 2) + "\n");
+
+  // Icons.
+  var densities = [["mdpi",48],["hdpi",72],["xhdpi",96],["xxhdpi",144],["xxxhdpi",192]];
+  for (var i = 0; i < densities.length; i++) {
+    var dir = "app/src/main/res/mipmap-" + densities[i][0] + "/";
+    var size = densities[i][1];
+    files.push({ path: dir + "ic_launcher.png", bytes: await renderIcon(size, "legacy") });
+    files.push({ path: dir + "ic_launcher_round.png", bytes: await renderIcon(size, "round") });
+    files.push({ path: dir + "ic_launcher_foreground.png",
+                 bytes: await renderIcon(Math.round(size * 2.25), "foreground") });
+  }
+
+  var splashPng = await renderIcon(512, "splash");
+  files.push({ path: "app/src/main/res/drawable/splash_logo.png", bytes: splashPng });
+  if (S.chrome.splash) {
+    files.push({ path: "app/src/main/assets/packr/splash.png", bytes: splashPng });
+  }
+
+  // Bundled web files.
+  if (S.source.mode === "files") {
+    webFiles.forEach(function (file) {
+      files.push({ path: "app/src/main/assets/www/" + file.path, bytes: file.bytes });
+    });
+  } else {
+    text("app/src/main/assets/www/.keep", "");
+  }
+
+  return files;
+}
+
+// -------------------------------------------------------------- generate
+
+function download(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+}
+
+function safeName() {
+  return (S.identity.appName || "app").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+$("generate").addEventListener("click", async function () {
+  var issues = problems();
+  showErrors(issues);
+  if (issues.length) { openTab(issues[0].indexOf("package") >= 0 || issues[0].indexOf("version") >= 0 ? "Identity" : "Source"); return; }
+
+  var button = $("generate");
+  button.disabled = true;
+  button.textContent = "Generating...";
+  try {
+    var files = await buildProject();
+    var blob = await makeZip(files);
+    download(blob, safeName() + "-android.zip");
+    $("aside-note").textContent = files.length + " files, " + (blob.size / 1024).toFixed(0) +
+      " KB. Unzip it, push to GitHub, and the Actions tab builds your APK.";
+  } catch (error) {
+    showErrors(["Generation failed: " + error.message]);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Generate the project";
+  }
+});
+
+$("preview-files").addEventListener("click", async function () {
+  var issues = problems();
+  showErrors(issues);
+  if (issues.length) return;
+  var files = await buildProject();
+  var list = files.map(function (f) {
+    return f.path + "  (" + (f.bytes.length / 1024).toFixed(1) + " KB)";
+  }).join("\n");
+  var blob = new Blob([list], { type: "text/plain" });
+  var url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(function () { URL.revokeObjectURL(url); }, 8000);
+});
+
+// -------------------------------------------------------------- settings
+
+$("save-settings").addEventListener("click", function () {
+  var blob = new Blob([JSON.stringify({ settings: S, navItems: navItems }, null, 2)],
+    { type: "application/json" });
+  download(blob, "packr.json");
+});
+
+$("load-settings").addEventListener("click", function () { $("settings-file").click(); });
+
+$("settings-file").addEventListener("change", function (e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var parsed = JSON.parse(reader.result);
+      var incoming = parsed.settings || parsed;
+      Object.keys(DEFAULTS).forEach(function (section) {
+        if (incoming[section]) {
+          Object.keys(DEFAULTS[section]).forEach(function (key) {
+            if (incoming[section][key] !== undefined) S[section][key] = incoming[section][key];
+          });
+        }
+      });
+      navItems = Array.isArray(parsed.navItems) ? parsed.navItems : [];
+      refreshControls();
+      renderNavRows();
+      afterChange();
+    } catch (error) {
+      showErrors(["That settings file could not be read."]);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ------------------------------------------------------------------ boot
+
+buildTabs();
+bindAll();
+renderNavRows();
+afterChange();
+</script>
+</body>
+</html>

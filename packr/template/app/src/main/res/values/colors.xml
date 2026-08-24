@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="packr_primary">__THEME_COLOR__</color>
+    <color name="packr_status_bar">__THEME_COLOR__</color>
+    <color name="packr_icon_background">__ICON_BACKGROUND__</color>
+</resources>

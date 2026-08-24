@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Packr" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/packr_primary</item>
+        <item name="colorPrimaryDark">@color/packr_status_bar</item>
+        <item name="android:windowBackground">@color/packr_primary</item>
+    </style>
+</resources>

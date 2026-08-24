@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace '__PACKAGE_ID__'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "__PACKAGE_ID__"
+        minSdk 24
+        targetSdk 35
+        versionCode __VERSION_CODE__
+        versionName "__VERSION_NAME__"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(project.findProperty('PACKR_KEYSTORE') ?: 'nonexistent.jks')
+            storePassword project.findProperty('PACKR_STORE_PASSWORD') ?: ''
+            keyAlias project.findProperty('PACKR_KEY_ALIAS') ?: ''
+            keyPassword project.findProperty('PACKR_KEY_PASSWORD') ?: ''
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (project.hasProperty('PACKR_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix ''
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+}

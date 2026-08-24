@@ -1,0 +1,14 @@
+{
+  "name": "packr",
+  "version": "1.0.0",
+  "description": "Turns a web page or a folder of HTML files into an installable Android package.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check lib/env.js && node --check lib/build.js && node --check lib/icons.js && node --check lib/keystore.js && node --check lib/project.js"
+  },
+  "engines": { "node": ">=18" },
+  "optionalDependencies": {},
+  "license": "MIT"
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">__APP_NAME__</string>
+    <string name="download_started">Downloading %1$s</string>
+    <string name="download_saved">Saved %1$s to Downloads</string>
+    <string name="download_failed">Could not save that file.</string>
+    <string name="no_file_picker">No app on this device can pick files.</string>
+    <string name="no_handler">No app on this device can open that link.</string>
+    <string name="offline_title">Can\'t reach the page</string>
+    <string name="offline_body">Check your connection, then try again.</string>
+    <string name="offline_retry">Try again</string>
+</resources>
