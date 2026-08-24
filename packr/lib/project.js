@@ -305,4 +305,11 @@ function gradleString(value) {
   return `"\\"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}\\""`;
 }
 
-module.exports = { validate, materialise, TEMPLATE_DIR };
+module.exports = {
+  validate,
+  materialise,
+  stageWebAssets,
+  copyTree,
+  escapeXml,
+  TEMPLATE_DIR,
+};

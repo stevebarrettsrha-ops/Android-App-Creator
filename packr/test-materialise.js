@@ -5,6 +5,10 @@ const os = require('os');
 const path = require('path');
 const assert = require('assert');
 const { validate, materialise } = require('./lib/project');
+const { materialiseIos, buildIosZip, safeProjectName, bundleIdFor } = require('./lib/ios');
+const { zipDirectory } = require('./lib/zip');
+const qrlib = require('./lib/qr');
+const zlib = require('zlib');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'packr-test-'));
 let failures = 0;
@@ -226,6 +230,131 @@ function walk(dir) {
     const file = path.join(singleDir, 'app/src/main/assets/www/index.html');
     assert.ok(fs.existsSync(file));
     assert.ok(fs.readFileSync(file, 'utf8').includes('Besorah'));
+  });
+
+  // ------------------------------------------------------------------- qr
+
+  console.log('\nqr codes');
+
+  check('a share url encodes into a well-formed matrix', () => {
+    const code = qrlib.encode('http://192.168.1.50:4477/dl/AbCd12Ef');
+    assert.strictEqual(code.size, code.version * 4 + 17);
+    // Finder pattern corners are dark; the module next to them is light.
+    assert.strictEqual(code.get(0, 0), true);
+    assert.strictEqual(code.get(code.size - 1, 0), true);
+    assert.strictEqual(code.get(0, code.size - 1), true);
+    assert.strictEqual(code.get(7, 7), false);
+    // Timing pattern alternates.
+    assert.notStrictEqual(code.get(8, 6), code.get(9, 6));
+  });
+
+  check('svg rendering produces a drawable document', () => {
+    const svg = qrlib.toSvg('hello packr');
+    assert.ok(svg.startsWith('<svg'), 'not svg');
+    assert.ok(svg.includes('<path'), 'no path data');
+    assert.ok(/viewBox="0 0 (\d+) \1"/.test(svg), 'not square');
+  });
+
+  check('too-long payloads are refused, not silently truncated', () => {
+    assert.throws(() => qrlib.encode('x'.repeat(4000)), /too long/i);
+  });
+
+  // ------------------------------------------------------------------ zip
+
+  console.log('\nzip writer');
+
+  const zipSource = path.join(tmp, 'zip-src');
+  fs.mkdirSync(path.join(zipSource, 'sub'), { recursive: true });
+  fs.writeFileSync(path.join(zipSource, 'hello.txt'), 'hello zip');
+  fs.writeFileSync(path.join(zipSource, 'sub', 'data.bin'), Buffer.from([0, 1, 2, 250]));
+  const zipTarget = path.join(tmp, 'out.zip');
+  zipDirectory(zipSource, zipTarget, 'Rooted');
+
+  check('archive has the right magic, count and extractable content', () => {
+    const buffer = fs.readFileSync(zipTarget);
+    assert.strictEqual(buffer.readUInt32LE(0), 0x04034b50, 'no local header magic');
+    const eocd = buffer.length - 22;
+    assert.strictEqual(buffer.readUInt32LE(eocd), 0x06054b50, 'no end record');
+    assert.strictEqual(buffer.readUInt16LE(eocd + 10), 2, 'wrong entry count');
+
+    // Extract the first entry by hand and compare.
+    const nameLength = buffer.readUInt16LE(26);
+    const extraLength = buffer.readUInt16LE(28);
+    const method = buffer.readUInt16LE(8);
+    const compressedSize = buffer.readUInt32LE(18);
+    const name = buffer.toString('utf8', 30, 30 + nameLength);
+    const data = buffer.subarray(30 + nameLength + extraLength, 30 + nameLength + extraLength + compressedSize);
+    const content = method === 8 ? zlib.inflateRawSync(data) : data;
+    assert.strictEqual(name, 'Rooted/hello.txt');
+    assert.strictEqual(content.toString('utf8'), 'hello zip');
+  });
+
+  // ------------------------------------------------------------------ ios
+
+  console.log('\nios project');
+
+  check('names and bundle ids are made apple-safe', () => {
+    assert.strictEqual(safeProjectName("Rush's Payroll & Co"), 'RushsPayrollCo');
+    assert.strictEqual(safeProjectName('99 Problems'), 'App99Problems');
+    assert.deepStrictEqual(bundleIdFor('jm.org.pay_roll'), { id: 'jm.org.pay-roll', changed: true });
+  });
+
+  const iosValidated = validate({
+    mode: 'local', source: site, appName: "Rush's Payroll & Co",
+    packageId: 'jm.org.cestis.payroll', versionName: '1.2.0', versionCode: 4,
+    orientation: 'portrait', permissions: ['camera'], buildType: 'debug', outputs: ['apk'],
+  });
+  assert.deepStrictEqual(iosValidated.errors, [], iosValidated.errors.join('; '));
+  const iosDir = path.join(tmp, 'project-ios');
+  const iosResult = await materialiseIos(iosValidated.config, iosDir);
+
+  check('xcode project lands under the safe name with no tokens left', () => {
+    const pbx = path.join(iosDir, 'RushsPayrollCo.xcodeproj', 'project.pbxproj');
+    assert.ok(fs.existsSync(pbx), 'project.pbxproj missing');
+    const offenders = walk(iosDir)
+      .filter((f) => /\.(pbxproj|plist|swift|md)$/.test(f))
+      .filter((f) => /__[A-Z_]+__/.test(fs.readFileSync(f, 'utf8')));
+    assert.deepStrictEqual(offenders, [], `tokens left in ${offenders.join(', ')}`);
+    assert.strictEqual(iosResult.bundleId, 'jm.org.cestis.payroll');
+  });
+
+  check('web assets and offline page are staged for the bundle', () => {
+    assert.ok(fs.existsSync(path.join(iosDir, 'www', 'index.html')));
+    assert.ok(fs.existsSync(path.join(iosDir, 'www', 'offline.html')));
+    assert.ok(!fs.existsSync(path.join(iosDir, 'www', 'notes.docx')), 'non-web file copied');
+  });
+
+  check('swift config carries the docket settings', () => {
+    const swift = fs.readFileSync(path.join(iosDir, 'App', 'Config.swift'), 'utf8');
+    assert.ok(swift.includes('let localMode = true'));
+    assert.ok(swift.includes('let appName = "Rush\'s Payroll & Co"'));
+  });
+
+  check('info.plist declares camera usage and portrait lock, nothing else', () => {
+    const plist = fs.readFileSync(path.join(iosDir, 'App', 'Info.plist'), 'utf8');
+    assert.ok(plist.includes('NSCameraUsageDescription'));
+    assert.ok(!plist.includes('NSMicrophoneUsageDescription'));
+    assert.ok(plist.includes('UIRequiresFullScreen'));
+    assert.ok(!plist.includes('__'), 'unfilled token in plist');
+  });
+
+  check('app store icon is an opaque rgb png at 1024', () => {
+    const icon = fs.readFileSync(
+      path.join(iosDir, 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'icon-1024.png')
+    );
+    assert.deepStrictEqual([...icon.subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
+    assert.strictEqual(icon.readUInt32BE(16), 1024, 'wrong width');
+    assert.strictEqual(icon[25], 2, 'has an alpha channel — the App Store rejects that');
+  });
+
+  const iosZip = await buildIosZip(
+    iosValidated.config, path.join(tmp, 'ios-zip-work'), path.join(tmp, 'ios-zip-out')
+  );
+  check('the whole project zips up for the trip to a mac', () => {
+    assert.strictEqual(iosZip.kind, 'ios');
+    const head = fs.readFileSync(iosZip.path).readUInt32LE(0);
+    assert.strictEqual(head, 0x04034b50);
+    assert.ok(iosZip.bytes > 5000, 'zip suspiciously small');
   });
 
   console.log(
