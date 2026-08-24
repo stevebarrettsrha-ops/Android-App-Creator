@@ -42,22 +42,37 @@ function chunk(type, data) {
   return Buffer.concat([length, typed, crc]);
 }
 
-/** Encode raw RGBA pixels as a PNG. No native dependencies. */
-function encodePng(width, height, rgba) {
+/**
+ * Encode raw RGBA pixels as a PNG. No native dependencies.
+ * With { alpha: false } the alpha channel is dropped and an opaque RGB PNG is
+ * written — App Store marketing icons are rejected if they carry alpha.
+ */
+function encodePng(width, height, rgba, { alpha = true } = {}) {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
   header.writeUInt32BE(height, 4);
   header[8] = 8; // bit depth
-  header[9] = 6; // colour type: RGBA
+  header[9] = alpha ? 6 : 2; // colour type: RGBA or RGB
   header[10] = 0;
   header[11] = 0;
   header[12] = 0;
 
-  const stride = width * 4;
+  const bytesPerPixel = alpha ? 4 : 3;
+  const stride = width * bytesPerPixel;
   const raw = Buffer.alloc((stride + 1) * height);
   for (let y = 0; y < height; y++) {
     raw[y * (stride + 1)] = 0; // filter: none
-    rgba.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride);
+    if (alpha) {
+      rgba.copy(raw, y * (stride + 1) + 1, y * width * 4, (y + 1) * width * 4);
+    } else {
+      for (let x = 0; x < width; x++) {
+        const from = (y * width + x) * 4;
+        const to = y * (stride + 1) + 1 + x * 3;
+        raw[to] = rgba[from];
+        raw[to + 1] = rgba[from + 1];
+        raw[to + 2] = rgba[from + 2];
+      }
+    }
   }
 
   return Buffer.concat([
@@ -79,12 +94,15 @@ function parseHex(hex, fallback = [16, 24, 34]) {
  * Draw a placeholder mark: a rounded plate with a downward chevron, which reads as
  * "page goes in, package comes out" at launcher sizes.
  */
-function drawMark(size, background, ink, transparentBackground) {
+function drawMark(size, background, ink, transparentBackground, options = {}) {
   const scale = 4; // supersample, then box-filter down, so edges are not jagged
   const big = size * scale;
 
+  // fullBleed paints the plate edge to edge with square corners, for icons the
+  // platform masks itself (the iOS App Store icon).
+  const fullBleed = Boolean(options.fullBleed);
   const inset = transparentBackground ? big * 0.21 : 0;
-  const radius = big * (transparentBackground ? 0.15 : 0.22);
+  const radius = fullBleed ? 0 : big * (transparentBackground ? 0.15 : 0.22);
   const plateMin = inset;
   const plateMax = big - inset;
   const span = plateMax - plateMin;
@@ -127,7 +145,43 @@ function drawMark(size, background, ink, transparentBackground) {
     }
   }
 
-  return encodePng(size, size, downsample(hi, big, scale));
+  return encodePng(size, size, downsample(hi, big, scale), { alpha: !fullBleed });
+}
+
+/**
+ * A single square icon PNG at the requested size, for the iOS asset catalog.
+ * Opaque, no alpha channel — App Store Connect rejects icons that have one.
+ */
+async function iconPngBuffer(size, options) {
+  const { iconPath, themeColor, iconBackground } = options;
+  const background = parseHex(iconBackground || themeColor);
+  const ink = [0, 194, 178];
+  const notes = [];
+
+  const usingCustom = Boolean(iconPath && fs.existsSync(iconPath));
+  if (usingCustom) {
+    try {
+      const sharp = require('sharp');
+      const [r, g, b] = background;
+      const buffer = await sharp(iconPath)
+        .resize(size, size, { fit: 'contain', background: { r, g, b, alpha: 1 } })
+        .flatten({ background: { r, g, b } })
+        .removeAlpha()
+        .png()
+        .toBuffer();
+      return { buffer, notes };
+    } catch (e) {
+      notes.push(
+        'sharp is not installed, so the App Store icon is a generated placeholder. Replace ' +
+          'icon-1024.png in the asset catalog with an opaque 1024x1024 PNG before uploading.'
+      );
+    }
+  } else {
+    notes.push(
+      'The iOS app icon is a generated placeholder — replace icon-1024.png before submitting.'
+    );
+  }
+  return { buffer: drawMark(size, background, ink, false, { fullBleed: true }), notes };
 }
 
 function downsample(source, sourceSize, factor) {
@@ -259,4 +313,4 @@ async function writeIcons(resDir, options) {
   return notes;
 }
 
-module.exports = { writeIcons, encodePng, parseHex };
+module.exports = { writeIcons, iconPngBuffer, encodePng, parseHex };

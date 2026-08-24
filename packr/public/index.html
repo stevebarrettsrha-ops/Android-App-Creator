@@ -1,0 +1,1226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Packr — build station</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2312181F'/%3E%3Cpath d='M8 3v6M5.5 6.5 8 9l2.5-2.5M4.5 12h7' stroke='%2300C2B2' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#12181F; --steel:#1E2731; --steel-line:#2E3B49;
+    --paper:#E7E4DD; --paper-line:#C9C4B8; --paper-deep:#8C8778;
+    --signal:#00C2B2; --amber:#E9A13B; --rust:#D14B3C;
+    --display:"Archivo Narrow","Arial Narrow",sans-serif;
+    --body:"Archivo","Segoe UI",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--ink); color:var(--paper); font-family:var(--body); font-size:15px; line-height:1.5; }
+
+  /* rail ------------------------------------------------------------ */
+  .rail { position:sticky; top:0; z-index:40; display:flex; flex-wrap:wrap; align-items:center;
+          gap:20px; padding:12px 26px; background:var(--ink); border-bottom:1px solid var(--steel-line); }
+  .wordmark { font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:.18em;
+              text-transform:uppercase; margin-right:auto; }
+  .wordmark span { color:var(--signal); }
+  .lamp { display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11px;
+          letter-spacing:.08em; text-transform:uppercase; color:var(--paper-deep); }
+  .lamp i { width:9px; height:9px; border-radius:50%; background:#54606E; flex:none; }
+  .lamp[data-state=ok] i { background:var(--signal); box-shadow:0 0 6px rgba(0,194,178,.8); }
+  .lamp[data-state=bad] i { background:var(--rust); box-shadow:0 0 6px rgba(209,75,60,.8); }
+  .rail button { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+                 background:none; border:1px solid var(--steel-line); color:var(--paper-deep);
+                 border-radius:2px; padding:6px 12px; cursor:pointer; }
+  .rail button:hover { color:var(--paper); border-color:var(--paper-deep); }
+
+  /* shell ----------------------------------------------------------- */
+  .shell { display:grid; grid-template-columns:minmax(0,1fr) 300px; align-items:start;
+           max-width:1200px; margin:0 auto; padding:26px 26px 120px; gap:32px; }
+
+  .docket { background:var(--paper); color:var(--ink); border-radius:3px;
+            box-shadow:0 18px 48px rgba(0,0,0,.4); }
+  .sect { padding:26px 30px 30px; border-top:1px solid var(--paper-line); }
+  .sect:first-child { border-top:0; }
+  .sect > h2 { font-family:var(--display); font-weight:700; text-transform:uppercase;
+               letter-spacing:.1em; font-size:15px; margin:0 0 4px; }
+  .sect > h2 .no { color:var(--paper-deep); margin-right:10px; font-family:var(--mono); font-size:12px; }
+  .sect > .lede { font-size:13.5px; color:#5C6570; margin:0 0 20px; max-width:66ch; }
+
+  .group { border-top:1px dashed var(--paper-line); padding-top:18px; margin-top:22px; }
+  .group:first-of-type { border-top:0; padding-top:0; margin-top:0; }
+  .group > h3 { font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.13em;
+                text-transform:uppercase; color:var(--paper-deep); margin:0 0 14px; }
+
+  /* fields ---------------------------------------------------------- */
+  .grid { display:grid; gap:15px 18px; }
+  .g2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .g3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .wide { grid-column:1 / -1; }
+
+  label.f { display:block; }
+  label.f > .cap { display:block; font-family:var(--mono); font-size:10px; font-weight:700;
+                   letter-spacing:.11em; text-transform:uppercase; color:#6C7581; margin-bottom:5px; }
+  label.f > .sub { display:block; font-size:12px; color:#6C7581; margin-top:5px; }
+
+  input[type=text], input[type=number], input[type=password], select {
+    width:100%; font-family:var(--mono); font-size:13px; color:var(--ink); background:#FDFCFA;
+    border:1px solid var(--paper-line); border-bottom-width:2px; border-radius:2px; padding:9px 11px; }
+  input[type=color] { width:100%; height:38px; padding:3px; border:1px solid var(--paper-line);
+                      border-radius:2px; background:#FDFCFA; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline:2px solid var(--signal); outline-offset:2px; }
+  input::placeholder { color:#A9A69C; }
+
+  .with-btn { display:flex; gap:8px; }
+  .with-btn input { flex:1; }
+  .with-btn button { font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase;
+                     background:var(--ink); color:var(--paper); border:0; border-radius:2px;
+                     padding:0 16px; cursor:pointer; }
+
+  .segs { display:flex; gap:8px; flex-wrap:wrap; }
+  .seg { flex:1 1 150px; text-align:left; font:inherit; cursor:pointer; background:#FDFCFA;
+         border:1px solid var(--paper-line); border-radius:2px; padding:10px 12px; color:var(--ink); }
+  .seg strong { display:block; font-family:var(--display); font-weight:700; text-transform:uppercase;
+                letter-spacing:.07em; font-size:12px; }
+  .seg em { font-style:normal; font-size:11.5px; color:#6C7581; }
+  .seg[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+  .seg[aria-pressed="true"] em { color:rgba(231,228,221,.7); }
+
+  .switches { display:grid; }
+  .sw { display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left; font:inherit;
+        color:var(--ink); background:none; border:0; border-top:1px solid var(--paper-line);
+        padding:11px 2px; cursor:pointer; }
+  .switches .sw:first-child { border-top:0; }
+  .sw .box { flex:none; width:16px; height:16px; margin-top:3px; border:1.5px solid #6C7581;
+             border-radius:2px; position:relative; }
+  .sw[aria-pressed="true"] .box { background:var(--ink); border-color:var(--ink); }
+  .sw[aria-pressed="true"] .box::after { content:""; position:absolute; left:4.5px; top:.5px;
+             width:4px; height:9px; border:solid var(--signal); border-width:0 2px 2px 0;
+             transform:rotate(42deg); }
+  .sw .c strong { display:block; font-size:13px; font-weight:600; }
+  .sw .c span { font-size:12px; color:#6C7581; }
+
+  .note { font-family:var(--mono); font-size:11.5px; line-height:1.55; margin-top:9px; padding:8px 11px;
+          border-left:3px solid var(--paper-deep); background:rgba(140,135,120,.12); color:#3C444E;
+          white-space:pre-wrap; overflow-wrap:break-word; }
+  .note[data-tone=ok]   { border-color:var(--signal); background:rgba(0,194,178,.1); }
+  .note[data-tone=warn] { border-color:var(--amber);  background:rgba(233,161,59,.14); }
+  .note[data-tone=bad]  { border-color:var(--rust);   background:rgba(209,75,60,.12); }
+  .note:empty { display:none; }
+
+  code.k { font-family:var(--mono); font-size:12px; background:rgba(18,24,31,.07);
+           padding:1px 5px; border-radius:2px; }
+
+  /* log ------------------------------------------------------------- */
+  .console { background:var(--ink); color:#9DB2C4; font-family:var(--mono); font-size:11.5px;
+             line-height:1.6; border-radius:3px; padding:14px 16px; height:300px; overflow:auto;
+             white-space:pre-wrap; overflow-wrap:break-word; display:none; }
+  .console[data-open="true"] { display:block; }
+
+  /* artefacts ------------------------------------------------------- */
+  .art { border:1px solid var(--paper-line); border-radius:3px; padding:16px 18px; margin-top:14px;
+         background:#FDFCFA; }
+  .art .head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .art .kind { font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.12em;
+               text-transform:uppercase; background:var(--ink); color:var(--signal);
+               border-radius:2px; padding:3px 8px; }
+  .art .name { font-family:var(--mono); font-size:13px; font-weight:500; overflow-wrap:anywhere; }
+  .art .size { font-family:var(--mono); font-size:11px; color:#6C7581; margin-left:auto; }
+  .art .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .art a.dl, .art button.qr-toggle {
+       font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase;
+       background:var(--ink); color:var(--paper); border:0; border-radius:2px; padding:9px 16px;
+       cursor:pointer; text-decoration:none; display:inline-block; }
+  .art button.qr-toggle { background:none; border:1px solid var(--paper-line); color:var(--ink); }
+  .qr-panel { display:none; margin-top:16px; border-top:1px dashed var(--paper-line); padding-top:16px; }
+  .qr-panel[data-open="true"] { display:grid; grid-template-columns:190px minmax(0,1fr); gap:18px; }
+  .qr-panel .qr-img svg { width:190px; height:190px; display:block; border-radius:3px; }
+  .qr-steps { font-size:12.5px; color:#3C444E; }
+  .qr-steps ol { margin:8px 0 0; padding-left:18px; }
+  .qr-steps li { margin-bottom:5px; }
+  .qr-link { font-family:var(--mono); font-size:11px; overflow-wrap:anywhere; margin-top:8px;
+             color:#3C444E; background:rgba(18,24,31,.06); padding:6px 9px; border-radius:2px; }
+
+  /* button editor --------------------------------------------------- */
+  .navrow { display:grid; grid-template-columns:120px minmax(0,1fr) 170px 34px 34px; gap:8px;
+            align-items:start; margin-bottom:8px; }
+  .navrow select, .navrow input { padding:8px 9px; font-size:12px; }
+  .navrow .iconsel { display:flex; align-items:center; gap:6px; }
+  .navrow .iconsel svg { width:20px; height:20px; flex:none; }
+  .navrow .valuewrap { grid-column:2 / 4; margin-top:-2px; }
+  .navrow .valuewrap input { width:100%; }
+  .navrow button { font-family:var(--mono); font-size:13px; background:none;
+                   border:1px solid var(--paper-line); color:#6C7581; border-radius:2px;
+                   height:34px; cursor:pointer; padding:0; }
+  .navrow button:hover { color:var(--rust); border-color:var(--rust); }
+  .navrow button.lockbtn[aria-pressed="true"] { color:var(--amber); border-color:var(--amber); }
+  .navrow button.lockbtn:hover { color:var(--amber); border-color:var(--amber); }
+  .addrow { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+            background:none; border:1px dashed var(--paper-line); color:#6C7581; border-radius:2px;
+            padding:9px 14px; cursor:pointer; margin-top:4px; }
+  .addrow:hover { color:var(--ink); border-color:var(--ink); }
+  .addrow[disabled] { opacity:.45; cursor:default; }
+
+  .navprev { border-radius:8px; padding:10px 6px 8px; display:flex; }
+  .navprev .navprev-empty { font-family:var(--mono); font-size:11px; color:#6C7581; padding:4px 8px; }
+  .navprev .pv-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+                     min-width:0; }
+  .navprev .pv-btn svg { width:22px; height:22px; }
+  .navprev .pv-btn span { font-size:9.5px; font-weight:600; max-width:100%; overflow:hidden;
+                          text-overflow:ellipsis; white-space:nowrap; }
+  .navprev .pv-btn .lockmark { font-size:8px; opacity:.8; }
+
+  /* store cards ----------------------------------------------------- */
+  .stores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .store { border:1px solid var(--paper-line); border-radius:3px; padding:18px; background:#FDFCFA; }
+  .store h4 { font-family:var(--display); font-weight:700; text-transform:uppercase;
+              letter-spacing:.09em; font-size:13px; margin:0 0 10px; }
+  .store p, .store li { font-size:12.5px; color:#3C444E; }
+  .store p { margin:0 0 10px; }
+  .store ol { margin:0 0 12px; padding-left:18px; }
+  .store li { margin-bottom:5px; }
+  .store .act { font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase;
+                background:var(--ink); color:var(--paper); border:0; border-radius:2px;
+                padding:10px 16px; cursor:pointer; }
+  .store .act[disabled] { opacity:.5; cursor:default; }
+
+  /* aside ----------------------------------------------------------- */
+  .aside { position:sticky; top:74px; }
+  .ticket { background:var(--steel); border:1px solid var(--steel-line); border-radius:3px; padding:18px; }
+  .ticket h3 { font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.13em;
+               text-transform:uppercase; color:var(--paper-deep); margin:0 0 12px; }
+  .ticket dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:5px 12px; }
+  .ticket dt { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+               color:var(--paper-deep); padding-top:2px; }
+  .ticket dd { margin:0; font-family:var(--mono); font-size:12px; overflow-wrap:anywhere; }
+  .go { display:block; width:100%; margin-top:14px; font-family:var(--display); font-weight:700;
+        font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink);
+        background:var(--signal); border:0; border-radius:2px; padding:15px 10px; cursor:pointer; }
+  .go[disabled] { background:#54606E; color:#9DB2C4; cursor:default; }
+  .aside-note { font-family:var(--mono); font-size:10.5px; line-height:1.6; color:var(--paper-deep);
+                margin:12px 2px 0; }
+
+  @media (max-width:980px) {
+    .shell { grid-template-columns:1fr; }
+    .aside { position:static; order:-1; }
+    .stores { grid-template-columns:1fr; }
+    .qr-panel[data-open="true"] { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="rail">
+  <div class="wordmark">Pack<span>r</span> · Build station</div>
+  <div class="lamp" id="lamp-java"><i></i><span>Java</span></div>
+  <div class="lamp" id="lamp-sdk"><i></i><span>Android SDK</span></div>
+  <div class="lamp" id="lamp-net"><i></i><span>QR sharing</span></div>
+  <button type="button" id="btn-recheck">Re-check</button>
+</header>
+
+<main class="shell">
+  <div class="docket">
+
+    <!-- 01 SOURCE -->
+    <section class="sect">
+      <h2><span class="no">01</span>What the app shows</h2>
+      <p class="lede">Point Packr at the web thing that becomes the app: files on this machine get bundled in and work offline; a web address is opened live on every launch.</p>
+      <div class="segs" data-seg="mode">
+        <button type="button" class="seg" data-value="local">
+          <strong>Files on this computer</strong><em>Bundled into the app. Works offline.</em>
+        </button>
+        <button type="button" class="seg" data-value="url">
+          <strong>Web address</strong><em>Loaded live. Needs a connection.</em>
+        </button>
+      </div>
+      <div class="grid" style="margin-top:15px">
+        <label class="f wide"><span class="cap" id="source-cap">Folder or .html file path</span>
+          <span class="with-btn">
+            <input type="text" id="source" placeholder="C:\sites\payroll  —  or  /home/you/site" spellcheck="false">
+            <button type="button" id="btn-check">Check</button>
+          </span>
+          <span class="sub" id="source-sub">The folder should contain an index.html. Everything web-shaped inside is packaged.</span>
+        </label>
+      </div>
+      <div class="note" id="source-note"></div>
+    </section>
+
+    <!-- 02 IDENTITY -->
+    <section class="sect">
+      <h2><span class="no">02</span>Identity</h2>
+      <p class="lede">The name goes under the launcher icon. The package ID is the app's permanent address — once published, it can never change.</p>
+      <div class="grid g2">
+        <label class="f"><span class="cap">App name</span>
+          <input type="text" id="app-name" maxlength="50" placeholder="Payroll Manager">
+        </label>
+        <label class="f"><span class="cap">Package ID</span>
+          <input type="text" id="package-id" placeholder="org.example.payroll" spellcheck="false">
+          <span class="sub">Lowercase parts separated by dots, like a reversed domain you control.</span>
+        </label>
+        <label class="f"><span class="cap">Version name</span>
+          <input type="text" id="version-name" value="1.0.0" spellcheck="false">
+          <span class="sub">What people see, e.g. 1.0.0.</span>
+        </label>
+        <label class="f"><span class="cap">Version code</span>
+          <input type="number" id="version-code" value="1" min="1" step="1">
+          <span class="sub">Whole number. Raise it for every store upload.</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- 03 LOOK -->
+    <section class="sect">
+      <h2><span class="no">03</span>Look</h2>
+      <p class="lede">Colours drive the app's status bar and generated icon. Supply a square PNG for a real icon — 512px or larger works best.</p>
+      <div class="grid g3">
+        <label class="f"><span class="cap">Theme colour</span>
+          <input type="color" id="theme-color" value="#101822">
+        </label>
+        <label class="f"><span class="cap">Icon background</span>
+          <input type="color" id="icon-bg" value="#101822">
+        </label>
+        <label class="f"><span class="cap">Orientation</span>
+          <select id="orientation">
+            <option value="unspecified">Follow the device</option>
+            <option value="portrait">Portrait only</option>
+            <option value="landscape">Landscape only</option>
+          </select>
+        </label>
+        <label class="f wide"><span class="cap">Icon file (optional)</span>
+          <input type="text" id="icon-path" placeholder="Path to a square .png on this machine" spellcheck="false">
+          <span class="sub">Left empty, Packr draws a placeholder mark you should replace before publishing.</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- 04 BEHAVIOUR -->
+    <section class="sect">
+      <h2><span class="no">04</span>Behaviour</h2>
+      <p class="lede">How the WebView host acts, and which device permissions the app declares. Declare only what the page really uses — stores review this list.</p>
+      <div class="group">
+        <h3>Host behaviour</h3>
+        <div class="switches">
+          <button type="button" class="sw" id="sw-external" aria-pressed="true">
+            <span class="box"></span><span class="c"><strong>External links open in the real browser</strong>
+            <span>Links leaving your site go to Chrome/Safari instead of the shell.</span></span>
+          </button>
+          <button type="button" class="sw" id="sw-refresh" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Pull to refresh</strong>
+            <span>Drag down from the top reloads the page.</span></span>
+          </button>
+          <button type="button" class="sw" id="sw-zoom" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Pinch zoom</strong>
+            <span>Off for app-like layouts; on for documents.</span></span>
+          </button>
+          <button type="button" class="sw" id="sw-cleartext" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Allow plain http</strong>
+            <span>Only for internal servers without TLS. Turned on automatically for an http:// address.</span></span>
+          </button>
+        </div>
+      </div>
+      <div class="group">
+        <h3>Permissions the app declares</h3>
+        <div class="switches">
+          <button type="button" class="sw" data-perm="camera" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Camera</strong><span>For pages that take photos or scan.</span></span>
+          </button>
+          <button type="button" class="sw" data-perm="microphone" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Microphone</strong><span>For pages that record audio.</span></span>
+          </button>
+          <button type="button" class="sw" data-perm="location" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Location</strong><span>For pages that use geolocation.</span></span>
+          </button>
+          <button type="button" class="sw" data-perm="storage" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Legacy storage</strong><span>Only needed for Android 9 and older download quirks.</span></span>
+          </button>
+          <button type="button" class="sw" data-perm="vibrate" aria-pressed="false">
+            <span class="box"></span><span class="c"><strong>Vibration</strong><span>For pages that use the vibration API.</span></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 APP CHROME & BUTTONS -->
+    <section class="sect">
+      <h2><span class="no">05</span>Buttons &amp; app chrome</h2>
+      <p class="lede">Give the app its own buttons: pick an icon, name it, and choose what it does — open a page, share, call, go home. Real app chrome also helps store review see more than "a website in a shell".</p>
+      <div class="switches">
+        <button type="button" class="sw" id="sw-topbar" aria-pressed="false">
+          <span class="box"></span><span class="c"><strong>Title bar</strong>
+          <span>A slim bar across the top with the app's name, in your theme colour.</span></span>
+        </button>
+      </div>
+      <div class="group">
+        <h3>Button bar (up to 5 buttons)</h3>
+        <div id="nav-rows"></div>
+        <button type="button" class="addrow" id="btn-add-nav">+ Add a button</button>
+        <div class="note" id="nav-note"></div>
+      </div>
+      <div class="group">
+        <h3>Preview</h3>
+        <div class="navprev" id="nav-preview"><span class="navprev-empty">No buttons yet — the app fills the whole screen.</span></div>
+      </div>
+    </section>
+
+    <!-- 06 PAID FEATURES -->
+    <section class="sect">
+      <h2><span class="no">06</span>Paid features</h2>
+      <p class="lede">Sell premium. Mark buttons as premium and they stay locked behind a paywall screen until the user enters an unlock code you sold them — no store account, no backend, works offline. Your web page can gate its own features too via <code class="k">window.PackrApp</code>.</p>
+      <div class="switches">
+        <button type="button" class="sw" id="sw-premium" aria-pressed="false">
+          <span class="box"></span><span class="c"><strong>Enable paid features</strong>
+          <span>Adds the premium screen and the unlock-code system to the app.</span></span>
+        </button>
+      </div>
+      <div id="premium-only" style="display:none">
+        <div class="group">
+          <h3>The offer</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Payment link (optional)</span>
+              <input type="text" id="pm-url" placeholder="https://buy.stripe.com/… or paypal.me/…" spellcheck="false">
+              <span class="sub">Opens in the phone's browser. After payment you send the buyer an unlock code.</span>
+            </label>
+            <label class="f"><span class="cap">Price line</span>
+              <input type="text" id="pm-price" maxlength="40" placeholder="Get premium — US$4.99">
+            </label>
+            <label class="f wide"><span class="cap">What premium gets them</span>
+              <textarea id="pm-pitch" maxlength="400" rows="3" style="width:100%;font-family:var(--mono);font-size:13px;border:1px solid var(--paper-line);border-bottom-width:2px;border-radius:2px;padding:9px 11px" placeholder="Unlock the full catalogue, offline exports, and priority support."></textarea>
+            </label>
+          </div>
+        </div>
+        <div class="group">
+          <h3>Unlock codes</h3>
+          <p class="lede" style="margin-bottom:12px">Codes are generated here and only their fingerprints are built into the app — the codes themselves exist nowhere but the file you download. One code unlocks one device; codes are reusable unless you rebuild with a new set.</p>
+          <div class="grid g3">
+            <label class="f"><span class="cap">How many</span>
+              <input type="number" id="pm-count" value="20" min="1" max="500" step="1">
+            </label>
+            <label class="f"><span class="cap">&nbsp;</span>
+              <span class="with-btn"><button type="button" id="btn-gen-codes" style="flex:1;padding:10px">Generate codes</button></span>
+            </label>
+            <label class="f"><span class="cap">In the app</span>
+              <span style="font-family:var(--mono);font-size:13px;display:block;padding:10px 0" id="pm-hash-count">0 codes</span>
+            </label>
+          </div>
+          <div id="pm-codes-out" style="display:none">
+            <textarea id="pm-codes" readonly rows="6" style="width:100%;font-family:var(--mono);font-size:12px;border:1px solid var(--paper-line);border-radius:2px;padding:9px 11px;margin-top:10px"></textarea>
+            <div class="actions" style="display:flex;gap:8px;margin-top:8px">
+              <a class="dl" id="pm-download" download="unlock-codes.txt" style="font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;background:var(--ink);color:var(--paper);border-radius:2px;padding:9px 16px;text-decoration:none">Download codes.txt</a>
+              <button type="button" class="qr-toggle" id="btn-clear-codes" style="font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;background:none;border:1px solid var(--paper-line);color:var(--ink);border-radius:2px;padding:9px 16px;cursor:pointer">Remove all codes</button>
+            </div>
+          </div>
+          <div class="note" data-tone="warn" style="margin-top:12px">Save the downloaded file — codes cannot be recovered from the app, only replaced by rebuilding. New codes add to the set; "Remove all" starts over.</div>
+        </div>
+        <div class="group">
+          <h3>Selling through the app stores?</h3>
+          <div class="note">Google Play and the Apple App Store require their own billing (Google Play Billing / Apple In-App Purchase) for digital goods sold inside store-distributed apps — payment links and unlock codes there can get the app rejected. This system is built for the QR-install / sideload route, internal apps, and apps selling real-world goods or services. For store IAP you would extend the generated projects with the store SDKs.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 SIGNING -->
+    <section class="sect">
+      <h2><span class="no">07</span>Signing</h2>
+      <p class="lede">Debug builds carry a throwaway key — fine for your own phone, useless for stores. Release builds are signed with a keystore you own and must never lose.</p>
+      <div class="segs" data-seg="buildType">
+        <button type="button" class="seg" data-value="debug">
+          <strong>Debug</strong><em>Sideload and test. Not publishable.</em>
+        </button>
+        <button type="button" class="seg" data-value="release">
+          <strong>Release</strong><em>Signed with your keystore. Store-ready.</em>
+        </button>
+      </div>
+
+      <div id="release-only" style="display:none">
+        <div class="group">
+          <h3>Use a keystore</h3>
+          <div class="grid g2">
+            <label class="f wide"><span class="cap">Keystore</span>
+              <select id="keystore-select"><option value="">— none —</option></select>
+              <span class="sub">Files in the <code class="k">keystores/</code> folder next to the server appear here.</span>
+            </label>
+            <label class="f"><span class="cap">Key alias</span>
+              <input type="text" id="ks-alias" placeholder="upload" spellcheck="false">
+            </label>
+            <label class="f"><span class="cap">Keystore password</span>
+              <input type="password" id="ks-pass">
+            </label>
+          </div>
+          <div class="note" data-tone="warn">Back the keystore up in more than one place. Lose the key after publishing and you can never update the app again — there is no recovery.</div>
+        </div>
+        <div class="group">
+          <h3>Or create one now</h3>
+          <div class="grid g3">
+            <label class="f"><span class="cap">File name</span>
+              <input type="text" id="new-ks-name" placeholder="payroll-upload" spellcheck="false">
+            </label>
+            <label class="f"><span class="cap">Alias</span>
+              <input type="text" id="new-ks-alias" value="upload" spellcheck="false">
+            </label>
+            <label class="f"><span class="cap">Password (6+ chars)</span>
+              <input type="password" id="new-ks-pass">
+            </label>
+            <label class="f"><span class="cap">Your / org name</span>
+              <input type="text" id="new-ks-cn" placeholder="Cestis Ltd">
+            </label>
+            <label class="f"><span class="cap">Country code</span>
+              <input type="text" id="new-ks-country" value="JM" maxlength="2" spellcheck="false">
+            </label>
+            <label class="f"><span class="cap">&nbsp;</span>
+              <span class="with-btn"><button type="button" id="btn-create-ks" style="flex:1;padding:10px">Create keystore</button></span>
+            </label>
+          </div>
+          <div class="note" id="ks-note"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 BUILD -->
+    <section class="sect">
+      <h2><span class="no">08</span>Build &amp; install</h2>
+      <p class="lede">APK installs directly on Android phones. AAB is the format the Google Play Console accepts. Build, then scan the QR code with the phone's camera to install.</p>
+      <div class="switches">
+        <button type="button" class="sw" id="out-apk" aria-pressed="true">
+          <span class="box"></span><span class="c"><strong>APK — direct install</strong><span>For sideloading and QR install.</span></span>
+        </button>
+        <button type="button" class="sw" id="out-aab" aria-pressed="false">
+          <span class="box"></span><span class="c"><strong>AAB — Google Play upload</strong><span>Required for new Play Store listings. Needs a release build.</span></span>
+        </button>
+      </div>
+      <div class="note" id="build-note"></div>
+      <div class="console" id="log" data-open="false"></div>
+      <div id="artefacts"></div>
+    </section>
+
+    <!-- 09 STORES -->
+    <section class="sect">
+      <h2><span class="no">09</span>The app stores</h2>
+      <p class="lede">Both stores take this app — with paperwork. Google Play wants a signed AAB from section 08. The Apple App Store cannot take an APK at all: Packr generates the matching Xcode project instead, and a Mac finishes the job.</p>
+      <div class="stores">
+        <div class="store">
+          <h4>Google Play</h4>
+          <ol>
+            <li>Build <strong>Release + AAB</strong> in section 08, signed with your keystore.</li>
+            <li>Create a developer account at <code class="k">play.google.com/console</code> (US$25, once).</li>
+            <li>Create the app, upload the <code class="k">.aab</code> under Production → Create release.</li>
+            <li>Fill the store listing, content rating and data-safety forms, then roll out.</li>
+          </ol>
+          <p><strong>Fair warning:</strong> Play's minimum-functionality policy rejects apps that are just a website in a shell. Bundled offline files argue your case; a wrapped public URL usually fails review. For staff phones, skip the store — the QR install above is enough.</p>
+          <button type="button" class="act" id="btn-play-shortcut">Set up a Play build</button>
+        </div>
+        <div class="store">
+          <h4>Apple App Store</h4>
+          <p>Packr generates a complete Xcode project of this same app — WKWebView shell, your files, icon, colours and permissions. Building and uploading it needs <strong>Xcode on a Mac</strong> and an <strong>Apple Developer membership</strong> (US$99/year). Full steps ship inside the download as <code class="k">APP-STORE-STEPS.md</code>.</p>
+          <button type="button" class="act" id="btn-ios">Generate the Xcode project</button>
+          <div class="note" id="ios-note"></div>
+          <div id="ios-result"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="aside">
+    <div class="ticket">
+      <h3>Build ticket</h3>
+      <dl>
+        <dt>App</dt><dd id="t-name">—</dd>
+        <dt>ID</dt><dd id="t-id">—</dd>
+        <dt>Version</dt><dd id="t-version">—</dd>
+        <dt>Source</dt><dd id="t-source">—</dd>
+        <dt>Type</dt><dd id="t-type">debug</dd>
+        <dt>Files</dt><dd id="t-outputs">apk</dd>
+        <dt>Buttons</dt><dd id="t-buttons">none</dd>
+        <dt>Premium</dt><dd id="t-premium">off</dd>
+      </dl>
+      <button type="button" class="go" id="btn-build">Build the app</button>
+      <p class="aside-note" id="aside-note">Runs Gradle on this machine. The first build downloads the Android toolchain pieces and can take several minutes; later builds are quick.</p>
+    </div>
+  </aside>
+</main>
+
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ state */
+
+const S = {
+  mode: 'local',
+  source: '',
+  appName: '',
+  packageId: '',
+  versionName: '1.0.0',
+  versionCode: 1,
+  orientation: 'unspecified',
+  themeColor: '#101822',
+  iconBackground: '#101822',
+  iconPath: '',
+  externalLinksInBrowser: true,
+  pullToRefresh: false,
+  allowZoom: false,
+  allowCleartext: false,
+  permissions: [],
+  buildType: 'debug',
+  outputs: ['apk'],
+  keystorePath: '',
+  keystoreAlias: '',
+  keystorePassword: '',
+  topBar: false,
+  navButtons: [],
+  premium: { enabled: false, paymentUrl: '', priceText: '', pitch: '', codeHashes: [] },
+};
+
+let environment = null;
+let building = false;
+
+const $ = (id) => document.getElementById(id);
+
+function saveState() {
+  const copy = { ...S };
+  delete copy.keystorePassword; // never persist a password
+  try { localStorage.setItem('packr-station', JSON.stringify(copy)); } catch (e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('packr-station');
+    if (raw) Object.assign(S, JSON.parse(raw), { keystorePassword: '' });
+  } catch (e) {}
+  if (!Array.isArray(S.navButtons)) S.navButtons = [];
+  S.premium = Object.assign(
+    { enabled: false, paymentUrl: '', priceText: '', pitch: '', codeHashes: [] },
+    S.premium && typeof S.premium === 'object' ? S.premium : {}
+  );
+  if (!Array.isArray(S.premium.codeHashes)) S.premium.codeHashes = [];
+}
+
+/* ------------------------------------------------------------- api helper */
+
+async function api(route, body) {
+  const options = body === undefined
+    ? {}
+    : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const response = await fetch(route, options);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.errors ? data.errors.join('\n') : (data.error || `Request failed (${response.status})`);
+    throw new Error(message);
+  }
+  return data;
+}
+
+function note(id, text, tone) {
+  const el = $(id);
+  el.textContent = text || '';
+  if (tone) el.setAttribute('data-tone', tone);
+  else el.removeAttribute('data-tone');
+}
+
+/* ------------------------------------------------------------ environment */
+
+function lamp(id, state, title) {
+  const el = $(id);
+  el.setAttribute('data-state', state);
+  if (title) el.title = title;
+}
+
+async function refreshEnvironment() {
+  try {
+    environment = await api('/api/environment');
+  } catch (error) {
+    lamp('lamp-java', 'bad', 'The Packr server is not answering.');
+    lamp('lamp-sdk', 'bad', '');
+    lamp('lamp-net', 'bad', '');
+    return;
+  }
+  lamp('lamp-java', environment.java.ok ? 'ok' : 'bad',
+    environment.java.ok ? environment.java.path : environment.java.reason);
+  lamp('lamp-sdk', environment.sdk.ok ? 'ok' : 'bad',
+    environment.sdk.ok ? environment.sdk.root : environment.sdk.reason);
+  const canShare = environment.sharing && environment.lan.length > 0;
+  lamp('lamp-net', canShare ? 'ok' : 'bad',
+    canShare ? `Phones can reach this machine at ${environment.lan[0].address}`
+             : 'No shareable network address. QR install needs Wi-Fi or PACKR_HOST reset.');
+
+  const select = $('keystore-select');
+  const current = S.keystorePath;
+  select.innerHTML = '<option value="">— none —</option>';
+  for (const ks of environment.keystores) {
+    const option = document.createElement('option');
+    option.value = ks.path;
+    option.textContent = ks.name;
+    select.appendChild(option);
+  }
+  select.value = current && [...select.options].some((o) => o.value === current) ? current : '';
+  S.keystorePath = select.value;
+
+  if (!environment.ready) {
+    note('build-note',
+      (environment.java.ok ? '' : `Java: ${environment.java.reason}\n`) +
+      (environment.sdk.ok ? '' : `Android SDK: ${environment.sdk.reason}\n`) +
+      'Builds cannot start until the red lamps above are green. See README.md for the two installs.',
+      'bad');
+  } else if (!building) {
+    note('build-note', '');
+  }
+}
+
+/* ------------------------------------------------------------------- form */
+
+function bindText(id, key, transform) {
+  const el = $(id);
+  el.value = S[key];
+  el.addEventListener('input', () => {
+    S[key] = transform ? transform(el.value) : el.value;
+    saveState();
+    renderTicket();
+  });
+}
+
+function bindSw(id, key) {
+  const el = $(id);
+  el.setAttribute('aria-pressed', String(Boolean(S[key])));
+  el.addEventListener('click', () => {
+    S[key] = !S[key];
+    el.setAttribute('aria-pressed', String(S[key]));
+    saveState();
+  });
+}
+
+function bindSegs(name, key, onChange) {
+  const holder = document.querySelector(`[data-seg="${name}"]`);
+  const buttons = holder.querySelectorAll('.seg');
+  const paint = () => {
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === S[key])));
+  };
+  buttons.forEach((b) => b.addEventListener('click', () => {
+    S[key] = b.dataset.value;
+    paint();
+    saveState();
+    renderTicket();
+    if (onChange) onChange();
+  }));
+  paint();
+}
+
+function renderModeBits() {
+  const local = S.mode === 'local';
+  $('source-cap').textContent = local ? 'Folder or .html file path' : 'Web address';
+  $('source').placeholder = local
+    ? 'C:\\sites\\payroll  —  or  /home/you/site'
+    : 'https://payroll.example.org';
+  $('source-sub').textContent = local
+    ? 'The folder should contain an index.html. Everything web-shaped inside is packaged.'
+    : 'The app opens this address on every launch. Plain http switches cleartext on automatically.';
+  $('btn-check').style.display = local ? '' : 'none';
+}
+
+function renderTicket() {
+  $('t-name').textContent = S.appName || '—';
+  $('t-id').textContent = S.packageId || '—';
+  $('t-version').textContent = `${S.versionName} (${S.versionCode})`;
+  $('t-source').textContent = S.source ? (S.mode === 'local' ? 'bundled files' : 'live address') : '—';
+  $('t-type').textContent = S.buildType;
+  $('t-outputs').textContent = S.outputs.join(' + ') || '—';
+  $('t-buttons').textContent = S.navButtons.length
+    ? `${S.navButtons.length}${S.topBar ? ' + title bar' : ''}`
+    : (S.topBar ? 'title bar' : 'none');
+  $('t-premium').textContent = S.premium.enabled
+    ? `on · ${S.premium.codeHashes.length} codes`
+    : 'off';
+  renderNavPreview();
+}
+
+function renderReleaseBits() {
+  $('release-only').style.display = S.buildType === 'release' ? '' : 'none';
+}
+
+function currentConfig() {
+  const keystore = S.buildType === 'release' && S.keystorePath
+    ? { path: S.keystorePath, alias: S.keystoreAlias, storePassword: S.keystorePassword }
+    : null;
+  return {
+    mode: S.mode,
+    source: S.source.trim(),
+    appName: S.appName.trim(),
+    packageId: S.packageId.trim(),
+    versionName: S.versionName.trim(),
+    versionCode: Number(S.versionCode),
+    orientation: S.orientation,
+    themeColor: S.themeColor,
+    iconBackground: S.iconBackground,
+    iconPath: S.iconPath.trim(),
+    externalLinksInBrowser: S.externalLinksInBrowser,
+    pullToRefresh: S.pullToRefresh,
+    allowZoom: S.allowZoom,
+    allowCleartext: S.allowCleartext,
+    permissions: S.permissions,
+    buildType: S.buildType,
+    outputs: S.outputs,
+    keystore,
+    topBar: S.topBar,
+    navButtons: S.navButtons,
+    premium: S.premium,
+  };
+}
+
+/* ------------------------------------------------------------------ build */
+
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function logLine(line) {
+  const el = $('log');
+  el.textContent += line + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function startBuild() {
+  if (building) return;
+  if (S.buildType === 'release' && !S.keystorePath) {
+    note('build-note',
+      'A release build without a keystore comes out unsigned and will not install. Pick or create a keystore in section 07, or build debug.',
+      'warn');
+    if (S.outputs.includes('aab')) return;
+  }
+  building = true;
+  $('btn-build').disabled = true;
+  $('btn-build').textContent = 'Building…';
+  $('artefacts').innerHTML = '';
+  $('log').textContent = '';
+  $('log').setAttribute('data-open', 'true');
+  note('build-note', '');
+
+  let job;
+  try {
+    job = await api('/api/build', currentConfig());
+  } catch (error) {
+    note('build-note', error.message, 'bad');
+    buildFinished();
+    return;
+  }
+
+  const stream = new EventSource(`/api/stream/${job.id}`);
+  stream.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'log') logLine(data.line);
+    if (data.type === 'done') {
+      stream.close();
+      if (data.status === 'done') {
+        note('build-note', 'Build finished.', 'ok');
+        renderArtefacts(data.artefacts);
+      } else {
+        note('build-note', `Build failed: ${data.error}`, 'bad');
+      }
+      buildFinished();
+    }
+  };
+  stream.onerror = () => {
+    stream.close();
+    note('build-note', 'Lost the connection to the build. Is the server still running?', 'bad');
+    buildFinished();
+  };
+}
+
+function buildFinished() {
+  building = false;
+  $('btn-build').disabled = false;
+  $('btn-build').textContent = 'Build the app';
+}
+
+function renderArtefacts(artefacts) {
+  const holder = $('artefacts');
+  holder.innerHTML = '';
+  for (const artefact of artefacts) {
+    const card = document.createElement('div');
+    card.className = 'art';
+    const kindLabel = artefact.kind === 'apk' ? 'APK · Android install'
+      : artefact.kind === 'aab' ? 'AAB · Play upload' : artefact.kind;
+    card.innerHTML = `
+      <div class="head">
+        <span class="kind">${kindLabel}</span>
+        <span class="name">${artefact.name}</span>
+        <span class="size">${formatBytes(artefact.bytes)}</span>
+      </div>
+      <div class="actions">
+        <a class="dl" href="${artefact.href}">Download</a>
+      </div>
+      <div class="qr-panel"></div>`;
+    if (artefact.kind === 'apk' && artefact.share) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'qr-toggle';
+      toggle.textContent = 'Install on a phone · QR';
+      toggle.addEventListener('click', () => toggleQr(card, artefact, toggle));
+      card.querySelector('.actions').appendChild(toggle);
+    }
+    holder.appendChild(card);
+  }
+}
+
+async function toggleQr(card, artefact, toggle) {
+  const panel = card.querySelector('.qr-panel');
+  if (panel.getAttribute('data-open') === 'true') {
+    panel.setAttribute('data-open', 'false');
+    return;
+  }
+  const lan = (environment && environment.lan) || [];
+  if (!environment || !environment.sharing || !lan.length) {
+    panel.innerHTML = '<div class="note" data-tone="warn">No shareable address. The phone and this machine must be on the same network, and the server must not be started with PACKR_HOST=127.0.0.1.</div>';
+    panel.setAttribute('data-open', 'true');
+    return;
+  }
+  const token = artefact.share.split('/').pop();
+  const addressOptions = lan.map((entry) =>
+    `<option value="${entry.address}">${entry.address} (${entry.interface})</option>`).join('');
+  panel.innerHTML = `
+    <div class="qr-img"></div>
+    <div class="qr-steps">
+      <label class="f"><span class="cap">This machine's address</span>
+        <select class="addr"></select>
+      </label>
+      <ol>
+        <li>Put the phone on the same Wi-Fi as this computer.</li>
+        <li>Scan the code with the camera and open the link.</li>
+        <li>Android will warn about unknown apps the first time — allow the browser to install, then open the APK.</li>
+      </ol>
+      <div class="qr-link"></div>
+    </div>`;
+  const addressSelect = panel.querySelector('.addr');
+  addressSelect.innerHTML = addressOptions;
+  const draw = async () => {
+    try {
+      const data = await api(`/api/qr?token=${encodeURIComponent(token)}&address=${encodeURIComponent(addressSelect.value)}`);
+      panel.querySelector('.qr-img').innerHTML = data.svg;
+      panel.querySelector('.qr-link').textContent = data.link;
+    } catch (error) {
+      panel.querySelector('.qr-img').innerHTML = `<div class="note" data-tone="bad">${error.message}</div>`;
+    }
+  };
+  addressSelect.addEventListener('change', draw);
+  panel.setAttribute('data-open', 'true');
+  await draw();
+}
+
+/* ------------------------------------------------------- buttons & chrome */
+
+let catalog = { icons: {}, actions: {}, maxButtons: 5 };
+
+async function loadCatalog() {
+  try { catalog = await api('/api/icons'); } catch (error) {}
+  renderNavRows();
+  renderNavPreview();
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function iconSvg(name, color) {
+  const path = catalog.icons[name];
+  if (!path) return '';
+  return `<svg viewBox="0 0 24 24" fill="${color}" aria-hidden="true"><path d="${path}"/></svg>`;
+}
+
+function isDarkColor(hex) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!match) return true;
+  const value = parseInt(match[1], 16);
+  return 0.299 * ((value >> 16) & 255) + 0.587 * ((value >> 8) & 255) + 0.114 * (value & 255) < 150;
+}
+
+function touchNav() {
+  saveState();
+  renderNavRows();
+  renderNavPreview();
+  renderTicket();
+}
+
+function renderNavRows() {
+  const holder = $('nav-rows');
+  holder.innerHTML = '';
+  S.navButtons.forEach((button, index) => {
+    const row = document.createElement('div');
+    row.className = 'navrow';
+    const iconOptions = Object.keys(catalog.icons).map((name) =>
+      `<option value="${name}"${name === button.icon ? ' selected' : ''}>${name}</option>`).join('');
+    const actionOptions = Object.entries(catalog.actions).map(([key, action]) =>
+      `<option value="${key}"${key === button.action ? ' selected' : ''}>${escapeHtml(action.label)}</option>`).join('');
+    const meta = catalog.actions[button.action] || {};
+    row.innerHTML = `
+      <span class="iconsel">${iconSvg(button.icon, '#12181F')}<select class="f-icon">${iconOptions}</select></span>
+      <input type="text" class="f-label" maxlength="14" placeholder="Label" value="${escapeHtml(button.label || '')}">
+      <select class="f-action">${actionOptions}</select>
+      <button type="button" class="lockbtn" aria-pressed="${button.premium ? 'true' : 'false'}"
+              title="Premium — locked until an unlock code is entered">&#9813;</button>
+      <button type="button" class="rmbtn" title="Remove this button">&#215;</button>
+      ${meta.value ? `<span class="valuewrap"><input type="text" class="f-value" placeholder="${escapeHtml(meta.value)}" value="${escapeHtml(button.value || '')}" spellcheck="false"></span>` : ''}`;
+    row.querySelector('.f-icon').addEventListener('change', (e) => { button.icon = e.target.value; touchNav(); });
+    row.querySelector('.f-label').addEventListener('input', (e) => {
+      button.label = e.target.value; saveState(); renderNavPreview(); renderTicket();
+    });
+    row.querySelector('.f-action').addEventListener('change', (e) => { button.action = e.target.value; touchNav(); });
+    row.querySelector('.lockbtn').addEventListener('click', () => {
+      button.premium = !button.premium;
+      if (button.premium && !S.premium.enabled) {
+        note('nav-note', 'Premium buttons need paid features switched on in section 06.', 'warn');
+      } else {
+        note('nav-note', '');
+      }
+      touchNav();
+    });
+    row.querySelector('.rmbtn').addEventListener('click', () => { S.navButtons.splice(index, 1); touchNav(); });
+    const valueInput = row.querySelector('.f-value');
+    if (valueInput) valueInput.addEventListener('input', (e) => { button.value = e.target.value; saveState(); });
+    holder.appendChild(row);
+  });
+  $('btn-add-nav').disabled = S.navButtons.length >= (catalog.maxButtons || 5);
+}
+
+function renderNavPreview() {
+  const holder = $('nav-preview');
+  const dark = isDarkColor(S.themeColor);
+  const ink = dark ? '#FFFFFF' : '#12181F';
+  holder.style.background = S.themeColor;
+  if (!S.navButtons.length) {
+    holder.innerHTML = `<span class="navprev-empty" style="color:${dark ? 'rgba(255,255,255,.6)' : '#5C6570'}">No buttons yet — the app fills the whole screen.</span>`;
+    return;
+  }
+  holder.innerHTML = S.navButtons.map((button) => `
+    <span class="pv-btn" style="color:${ink}">
+      ${iconSvg(button.icon, ink)}
+      <span>${escapeHtml(button.label || '…')}</span>
+      ${button.premium ? '<span class="lockmark">&#9813; premium</span>' : ''}
+    </span>`).join('');
+}
+
+/* ----------------------------------------------------------- paid features */
+
+function renderPremiumBits() {
+  $('premium-only').style.display = S.premium.enabled ? '' : 'none';
+  const count = S.premium.codeHashes.length;
+  $('pm-hash-count').textContent = `${count} code${count === 1 ? '' : 's'}`;
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateCodes() {
+  const count = Math.min(500, Math.max(1, Number($('pm-count').value) || 20));
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L look-alikes
+  const codes = [];
+  for (let i = 0; i < count; i++) {
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    let raw = '';
+    for (const byte of bytes) raw += alphabet[byte % alphabet.length];
+    codes.push(`${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`);
+  }
+  for (const code of codes) {
+    S.premium.codeHashes.push(await sha256Hex(code.replace(/-/g, '')));
+  }
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+  $('pm-codes-out').style.display = '';
+  $('pm-codes').value = codes.join('\n');
+  $('pm-download').href =
+    'data:text/plain;charset=utf-8,' + encodeURIComponent(codes.join('\r\n') + '\r\n');
+}
+
+async function createKeystore() {
+  const name = $('new-ks-name').value.trim();
+  const password = $('new-ks-pass').value;
+  note('ks-note', '');
+  if (!name) return note('ks-note', 'Give the keystore a file name.', 'bad');
+  if (password.length < 6) return note('ks-note', 'The password needs at least 6 characters.', 'bad');
+  $('btn-create-ks').disabled = true;
+  try {
+    const created = await api('/api/keystore', {
+      name,
+      alias: $('new-ks-alias').value.trim() || 'upload',
+      storePassword: password,
+      commonName: $('new-ks-cn').value.trim(),
+      organisation: $('new-ks-cn').value.trim(),
+      country: $('new-ks-country').value.trim() || 'JM',
+    });
+    note('ks-note',
+      `Created ${created.storePath}\nSHA-256: ${created.fingerprint || 'n/a'}\nBack this file up now — more than one copy, more than one place.`,
+      'ok');
+    await refreshEnvironment();
+    $('keystore-select').value = created.storePath;
+    S.keystorePath = created.storePath;
+    S.keystoreAlias = created.alias;
+    $('ks-alias').value = created.alias;
+    S.keystorePassword = password;
+    $('ks-pass').value = password;
+    saveState();
+  } catch (error) {
+    note('ks-note', error.message, 'bad');
+  }
+  $('btn-create-ks').disabled = false;
+}
+
+/* -------------------------------------------------------------------- ios */
+
+async function generateIos() {
+  const button = $('btn-ios');
+  button.disabled = true;
+  button.textContent = 'Generating…';
+  note('ios-note', '');
+  $('ios-result').innerHTML = '';
+  try {
+    const result = await api('/api/ios', currentConfig());
+    const card = document.createElement('div');
+    card.className = 'art';
+    card.innerHTML = `
+      <div class="head">
+        <span class="kind">Xcode project</span>
+        <span class="name">${result.name}</span>
+        <span class="size">${formatBytes(result.bytes)}</span>
+      </div>
+      <div class="actions"><a class="dl" href="${result.href}">Download</a></div>`;
+    $('ios-result').appendChild(card);
+    const lines = [`Bundle ID: ${result.bundleId}`, ...result.notes];
+    note('ios-note', lines.join('\n'), 'ok');
+  } catch (error) {
+    note('ios-note', error.message, 'bad');
+  }
+  button.disabled = false;
+  button.textContent = 'Generate the Xcode project';
+}
+
+/* ------------------------------------------------------------------- init */
+
+loadState();
+
+bindSegs('mode', 'mode', renderModeBits);
+bindSegs('buildType', 'buildType', renderReleaseBits);
+
+bindText('source', 'source');
+bindText('app-name', 'appName');
+bindText('package-id', 'packageId');
+bindText('version-name', 'versionName');
+bindText('version-code', 'versionCode');
+bindText('theme-color', 'themeColor');
+bindText('icon-bg', 'iconBackground');
+bindText('icon-path', 'iconPath');
+bindText('ks-alias', 'keystoreAlias');
+bindText('ks-pass', 'keystorePassword');
+
+$('orientation').value = S.orientation;
+$('orientation').addEventListener('change', () => {
+  S.orientation = $('orientation').value;
+  saveState();
+});
+
+bindSw('sw-external', 'externalLinksInBrowser');
+bindSw('sw-refresh', 'pullToRefresh');
+bindSw('sw-zoom', 'allowZoom');
+bindSw('sw-cleartext', 'allowCleartext');
+bindSw('sw-topbar', 'topBar');
+
+$('sw-premium').setAttribute('aria-pressed', String(S.premium.enabled));
+$('sw-premium').addEventListener('click', () => {
+  S.premium.enabled = !S.premium.enabled;
+  $('sw-premium').setAttribute('aria-pressed', String(S.premium.enabled));
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+});
+
+for (const [id, key] of [['pm-url', 'paymentUrl'], ['pm-price', 'priceText'], ['pm-pitch', 'pitch']]) {
+  const el = $(id);
+  el.value = S.premium[key];
+  el.addEventListener('input', () => {
+    S.premium[key] = el.value;
+    saveState();
+  });
+}
+
+$('btn-add-nav').addEventListener('click', () => {
+  S.navButtons.push({ label: 'Home', icon: 'home', action: 'home', value: '', premium: false });
+  touchNav();
+});
+$('btn-gen-codes').addEventListener('click', generateCodes);
+$('btn-clear-codes').addEventListener('click', () => {
+  S.premium.codeHashes = [];
+  $('pm-codes-out').style.display = 'none';
+  $('pm-codes').value = '';
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+});
+
+document.querySelectorAll('[data-perm]').forEach((el) => {
+  const perm = el.dataset.perm;
+  el.setAttribute('aria-pressed', String(S.permissions.includes(perm)));
+  el.addEventListener('click', () => {
+    if (S.permissions.includes(perm)) S.permissions = S.permissions.filter((p) => p !== perm);
+    else S.permissions.push(perm);
+    el.setAttribute('aria-pressed', String(S.permissions.includes(perm)));
+    saveState();
+  });
+});
+
+function bindOutput(id, kind) {
+  const el = $(id);
+  el.setAttribute('aria-pressed', String(S.outputs.includes(kind)));
+  el.addEventListener('click', () => {
+    if (S.outputs.includes(kind)) S.outputs = S.outputs.filter((o) => o !== kind);
+    else S.outputs.push(kind);
+    if (!S.outputs.length) S.outputs = ['apk'];
+    document.querySelectorAll('#out-apk,#out-aab').forEach((b) =>
+      b.setAttribute('aria-pressed', String(S.outputs.includes(b.id === 'out-apk' ? 'apk' : 'aab'))));
+    saveState();
+    renderTicket();
+  });
+}
+bindOutput('out-apk', 'apk');
+bindOutput('out-aab', 'aab');
+
+$('keystore-select').addEventListener('change', () => {
+  S.keystorePath = $('keystore-select').value;
+  saveState();
+});
+
+$('btn-check').addEventListener('click', async () => {
+  try {
+    const result = await api('/api/inspect-path', { path: S.source });
+    note('source-note', result.message, result.ok ? (result.kind === 'folder' && !result.hasIndex ? 'warn' : 'ok') : 'bad');
+  } catch (error) {
+    note('source-note', error.message, 'bad');
+  }
+});
+
+$('btn-build').addEventListener('click', startBuild);
+$('btn-create-ks').addEventListener('click', createKeystore);
+$('btn-ios').addEventListener('click', generateIos);
+$('btn-recheck').addEventListener('click', refreshEnvironment);
+
+$('btn-play-shortcut').addEventListener('click', () => {
+  S.buildType = 'release';
+  if (!S.outputs.includes('aab')) S.outputs.push('aab');
+  document.querySelectorAll('[data-seg="buildType"] .seg').forEach((b) =>
+    b.setAttribute('aria-pressed', String(b.dataset.value === 'release')));
+  $('out-aab').setAttribute('aria-pressed', 'true');
+  renderReleaseBits();
+  renderTicket();
+  saveState();
+  document.querySelectorAll('.sect')[6].scrollIntoView({ behavior: 'smooth' });
+});
+
+renderModeBits();
+renderReleaseBits();
+renderPremiumBits();
+renderTicket();
+refreshEnvironment();
+loadCatalog();
+</script>
+</body>
+</html>

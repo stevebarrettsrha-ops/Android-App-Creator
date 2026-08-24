@@ -5,20 +5,66 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes } = require('crypto');
 
 const env = require('./lib/env');
 const { validate, materialise } = require('./lib/project');
 const { build } = require('./lib/build');
 const { createKeystore } = require('./lib/keystore');
+const { buildIosZip } = require('./lib/ios');
+const qr = require('./lib/qr');
+const appui = require('./lib/appui');
 
 const PORT = Number(process.env.PACKR_PORT || 4477);
+// The server binds all interfaces so a phone on the same Wi-Fi can fetch a
+// finished APK through its QR code. Only /dl/<token> answers those requests —
+// every other route is refused unless the caller is this machine. Set
+// PACKR_HOST=127.0.0.1 to switch the sharing off entirely.
+const HOST = process.env.PACKR_HOST || '0.0.0.0';
 const ROOT = __dirname;
 const WORK_DIR = path.join(ROOT, 'work');
 const OUTPUT_DIR = path.join(ROOT, 'output');
 const KEYSTORE_DIR = path.join(ROOT, 'keystores');
 
 const jobs = new Map();
+const shares = new Map(); // token -> { path, name, kind }
+
+const DOWNLOAD_TYPES = {
+  apk: 'application/vnd.android.package-archive',
+  aab: 'application/octet-stream',
+  ios: 'application/zip',
+};
+
+function isLoopback(request) {
+  const address = request.socket.remoteAddress || '';
+  return (
+    address === '127.0.0.1' ||
+    address === '::1' ||
+    address === '::ffff:127.0.0.1' ||
+    address.startsWith('127.')
+  );
+}
+
+function lanAddresses() {
+  const found = [];
+  for (const [name, addresses] of Object.entries(os.networkInterfaces())) {
+    for (const info of addresses || []) {
+      if (info.family === 'IPv4' && !info.internal) {
+        found.push({ interface: name, address: info.address });
+      }
+    }
+  }
+  return found;
+}
+
+function createShare(artefact) {
+  const token = randomBytes(6).toString('base64url');
+  shares.set(token, { path: artefact.path, name: artefact.name, kind: artefact.kind });
+  if (shares.size > 200) {
+    shares.delete(shares.keys().next().value);
+  }
+  return token;
+}
 
 // ------------------------------------------------------------------ plumbing
 
@@ -133,6 +179,7 @@ async function runBuild(job, config) {
       kind: artefact.kind,
       bytes: artefact.bytes,
       href: `/api/artefact/${job.id}/${encodeURIComponent(artefact.name)}`,
+      share: `/dl/${createShare(artefact)}`,
       diskPath: artefact.path,
     }));
 
@@ -151,6 +198,29 @@ const server = http.createServer(async (request, response) => {
   const route = url.pathname;
 
   try {
+    // Phones on the network may only fetch shared artefacts.
+    if ((request.method === 'GET' || request.method === 'HEAD') && route.startsWith('/dl/')) {
+      const share = shares.get(route.slice('/dl/'.length));
+      if (!share || !fs.existsSync(share.path)) {
+        return sendJson(response, 404, { error: 'That link has expired. Build again.' });
+      }
+      const stat = fs.statSync(share.path);
+      response.writeHead(200, {
+        'Content-Type': DOWNLOAD_TYPES[share.kind] || 'application/octet-stream',
+        'Content-Length': stat.size,
+        'Content-Disposition': `attachment; filename="${share.name}"`,
+        'Cache-Control': 'no-store',
+      });
+      if (request.method === 'HEAD') return response.end();
+      return fs.createReadStream(share.path).pipe(response);
+    }
+
+    if (!isLoopback(request)) {
+      return sendJson(response, 403, {
+        error: 'Only APK download links are reachable from other devices.',
+      });
+    }
+
     if (request.method === 'GET' && (route === '/' || route === '/index.html')) {
       const file = fs.readFileSync(path.join(ROOT, 'public', 'index.html'));
       response.writeHead(200, {
@@ -181,6 +251,67 @@ const server = http.createServer(async (request, response) => {
         keytool: Boolean(toolchain.keytool),
         keystores: listKeystores(),
         home: os.homedir(),
+        port: PORT,
+        sharing: HOST !== '127.0.0.1',
+        lan: lanAddresses(),
+      });
+    }
+
+    // The button icon set and available actions, for the docket's editor.
+    if (request.method === 'GET' && route === '/api/icons') {
+      const icons = {};
+      for (const [name, icon] of Object.entries(appui.ICONS)) icons[name] = icon.path;
+      return sendJson(response, 200, {
+        icons,
+        actions: appui.ACTIONS,
+        maxButtons: appui.MAX_BUTTONS,
+      });
+    }
+
+    // A scannable install link: /api/qr?token=<share>&address=<lan-ip>
+    if (request.method === 'GET' && route === '/api/qr') {
+      const token = url.searchParams.get('token') || '';
+      const address = url.searchParams.get('address') || '';
+      if (!shares.has(token)) {
+        return sendJson(response, 404, { error: 'Unknown share token.' });
+      }
+      if (!/^[0-9a-zA-Z.:\-]+$/.test(address)) {
+        return sendJson(response, 400, { error: 'Bad address.' });
+      }
+      const link = `http://${address}:${PORT}/dl/${token}`;
+      const svg = qr.toSvg(link, { ecl: 'M' });
+      return sendJson(response, 200, { link, svg });
+    }
+
+    // Generate the matching Xcode project as a zip, for the Apple App Store
+    // path. No compiler needed here — building it happens in Xcode on a Mac.
+    if (request.method === 'POST' && route === '/api/ios') {
+      const body = await readBody(request);
+      // Signing fields are Android-only; neutralise them before validating.
+      const { config, errors } = validate({
+        ...body,
+        outputs: ['apk'],
+        buildType: 'debug',
+        keystore: null,
+      });
+      if (errors.length) {
+        return sendJson(response, 400, { errors });
+      }
+      const slug = `${config.packageId}-${config.versionCode}-ios`.replace(
+        /[^A-Za-z0-9._-]+/g,
+        '-'
+      );
+      const artefact = await buildIosZip(
+        config,
+        path.join(WORK_DIR, slug),
+        path.join(OUTPUT_DIR, slug)
+      );
+      return sendJson(response, 200, {
+        name: artefact.name,
+        bytes: artefact.bytes,
+        bundleId: artefact.bundleId,
+        notes: artefact.notes,
+        href: `/dl/${createShare(artefact)}`,
       });
     }
 
@@ -331,11 +462,19 @@ for (const dir of [WORK_DIR, OUTPUT_DIR, KEYSTORE_DIR]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, HOST, () => {
   const toolchain = env.inspect();
   console.log(`\n  Packr is running at http://localhost:${PORT}\n`);
   console.log(`  Java        ${toolchain.java.ok ? toolchain.java.path : 'NOT FOUND'}`);
   console.log(`  Android SDK ${toolchain.sdk.ok ? toolchain.sdk.root : 'NOT FOUND'}`);
+  if (HOST !== '127.0.0.1') {
+    const lan = lanAddresses();
+    if (lan.length) {
+      console.log(
+        `  QR install  phones on this network can fetch builds via http://${lan[0].address}:${PORT}/dl/...`
+      );
+    }
+  }
   if (!toolchain.ready) {
     console.log('\n  Builds will fail until both are in place. See README.md.\n');
   } else {

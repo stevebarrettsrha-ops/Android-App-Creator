@@ -9,6 +9,11 @@ node server.js
 
 Then open **http://localhost:4477**.
 
+After a build finishes, every APK gets an **Install on a phone · QR** button: point the
+phone's camera at the code and the APK downloads straight from your machine over the local
+network. The same screen generates a signed AAB for the Google Play Console and a complete
+Xcode project for the Apple App Store.
+
 ---
 
 ## What you need installed first
@@ -60,6 +65,60 @@ will make Packr enable cleartext traffic and warn you.
 
 ---
 
+## Buttons and app chrome
+
+Section 05 of the docket gives the app its own controls instead of leaving it a bare
+web page:
+
+- **A title bar** with the app's name, in your theme colour.
+- **A button bar** of up to five buttons. Each button gets an icon (26 built in — drawn
+  as vector drawables on Android and matched to SF Symbols on iOS), a label, and an
+  action: go to the start page, back, forward, reload, share the current page, open a
+  specific page or URL, open a link in the real browser, call a phone number, compose
+  an email, or open the premium screen.
+
+Buttons are native — not injected into your page — so they work even while the page is
+loading or offline. Real chrome also matters for store review: both stores reject apps
+that are indistinguishable from a browser tab.
+
+---
+
+## Paid features
+
+Section 06 adds a premium tier that works completely offline, with no store account and
+no server:
+
+1. Switch **paid features** on, write the pitch and price, and (optionally) add a
+   payment link — Stripe, PayPal, anything. The link opens in the phone's real browser.
+2. **Generate unlock codes.** The codes are created in your browser and only their
+   SHA-256 fingerprints are built into the app. Download the codes file and keep it —
+   you sell or hand out codes however you like (after a payment, in person, by email).
+3. Mark any button **premium** (the crown toggle). Tapping it before unlocking opens
+   the paywall screen; after a valid code is entered on that screen, everything opens.
+   Unlocking is per device and survives restarts.
+
+Your own web content can gate features too — both shells inject a bridge:
+
+```js
+window.PackrApp.isPremium()        // true once unlocked (always true if premium is off)
+await Promise.resolve(window.PackrApp.unlock(code))  // true if the code was valid
+window.PackrApp.openPaywall()      // show the premium screen
+window.PackrApp.openExternal(url)  // open a link in the system browser
+window.PackrApp.goHome()           // load the start page
+```
+
+(The `Promise.resolve` wrapper smooths over the platforms: Android answers
+synchronously, iOS with a Promise.)
+
+**Selling through the stores?** Google Play and the Apple App Store require their own
+billing (Google Play Billing / Apple In-App Purchase) for digital goods inside
+store-distributed apps — payment links and unlock codes there can get an app rejected.
+This system is aimed at the QR-install / sideload route, internal distribution, and
+apps selling real-world goods or services. For store IAP, extend the generated projects
+with the store SDKs.
+
+---
+
 ## Signing, and why it is not optional
 
 - **Debug** builds are signed with a throwaway key. Fine for sideloading onto a test phone.
@@ -92,12 +151,49 @@ For internal distribution — staff phones, a training centre, an organisation's
 none of this applies. Sideloading an APK, or using Play's managed private-app channel, is
 straightforward and is where a tool like this earns its keep.
 
-**Play requires app bundles, not APKs, for new listings.** Choose AAB in section 05 for
+**Play requires app bundles, not APKs, for new listings.** Choose AAB in section 06 for
 anything going to the Play Console. Keep APK for direct install.
 
-**APK is Android only.** An iPhone cannot install one. Reaching the Apple App Store means a
-different toolchain entirely — Xcode, a Mac (or a hosted macOS build runner), and a paid
-Apple Developer account. Nothing in this project moves you toward it.
+---
+
+## Installing on a phone with the QR code
+
+The server listens on your local network as well as on localhost, but other devices can
+reach **only** finished build downloads (`/dl/<token>` links) — the interface, the build
+API and your file system stay loopback-only. Set `PACKR_HOST=127.0.0.1` before starting
+the server to switch network sharing off entirely.
+
+For the QR install to work:
+
+1. The phone and this computer must be on the same network (same Wi-Fi).
+2. Scan the code, open the link, and let the browser download the APK.
+3. Android asks once to allow installs from the browser ("install unknown apps") —
+   that prompt is normal for any sideloaded APK.
+
+If the phone cannot reach the link, a firewall on this machine is usually blocking
+inbound connections to port 4477, or the Wi-Fi has client isolation enabled (common on
+guest networks).
+
+---
+
+## The Apple App Store
+
+**An APK is Android-only — an iPhone cannot install one, and Apple cannot accept one.**
+What Packr does instead: section 07 generates a complete **Xcode project** of the same
+app — a Swift WKWebView shell with your bundled files or live address, your icon,
+colours, orientation and permission strings — zipped and ready to move to a Mac.
+
+What it honestly still needs, because Apple allows iOS builds from nowhere else:
+
+- **Xcode on a Mac.** Any Mac with Xcode 15+ works, including a cloud one
+  (GitHub Actions macOS runners, Xcode Cloud, MacStadium, AWS EC2 Mac).
+- **An Apple Developer Program membership**, US$99/year, for the upload.
+
+Step-by-step instructions are generated into the download as `APP-STORE-STEPS.md`,
+including the archive/upload flow and an `ExportOptions.plist` for command-line builds.
+Apple's review is stricter than Google's about wrapper apps (Guideline 4.2, Minimum
+Functionality) — bundled offline content and device features materially improve your odds;
+a bare wrapper around a public website will usually be rejected by both stores.
 
 ---
 
@@ -125,14 +221,19 @@ docket, open that folder in Android Studio and take it from there.
 ```
 server.js                local server and API
 lib/env.js               JDK / SDK / Gradle detection
-lib/project.js           docket validation, project generation
-lib/icons.js             launcher icons (dependency-free PNG writer)
+lib/project.js           docket validation, Android project generation
+lib/icons.js             launcher + App Store icons (dependency-free PNG writer)
 lib/keystore.js          keytool wrapper
 lib/build.js             Gradle invocation, artefact collection
+lib/qr.js                QR code generator for install links (dependency-free)
+lib/zip.js               ZIP writer for the iOS project export (dependency-free)
+lib/ios.js               Xcode project generation for the Apple App Store
+lib/appui.js             button icons/actions, app chrome, paywall + unlock codes
 public/index.html        the interface
 template/                the Android project skeleton
+template-ios/            the Xcode project skeleton
 work/                    generated projects
-output/                  finished APK and AAB files
+output/                  finished APK, AAB and iOS zip files
 keystores/               signing keys — back these up
 test-materialise.js      node test-materialise.js
 ```
