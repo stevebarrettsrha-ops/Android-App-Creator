@@ -143,6 +143,35 @@
   .qr-link { font-family:var(--mono); font-size:11px; overflow-wrap:anywhere; margin-top:8px;
              color:#3C444E; background:rgba(18,24,31,.06); padding:6px 9px; border-radius:2px; }
 
+  /* button editor --------------------------------------------------- */
+  .navrow { display:grid; grid-template-columns:120px minmax(0,1fr) 170px 34px 34px; gap:8px;
+            align-items:start; margin-bottom:8px; }
+  .navrow select, .navrow input { padding:8px 9px; font-size:12px; }
+  .navrow .iconsel { display:flex; align-items:center; gap:6px; }
+  .navrow .iconsel svg { width:20px; height:20px; flex:none; }
+  .navrow .valuewrap { grid-column:2 / 4; margin-top:-2px; }
+  .navrow .valuewrap input { width:100%; }
+  .navrow button { font-family:var(--mono); font-size:13px; background:none;
+                   border:1px solid var(--paper-line); color:#6C7581; border-radius:2px;
+                   height:34px; cursor:pointer; padding:0; }
+  .navrow button:hover { color:var(--rust); border-color:var(--rust); }
+  .navrow button.lockbtn[aria-pressed="true"] { color:var(--amber); border-color:var(--amber); }
+  .navrow button.lockbtn:hover { color:var(--amber); border-color:var(--amber); }
+  .addrow { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+            background:none; border:1px dashed var(--paper-line); color:#6C7581; border-radius:2px;
+            padding:9px 14px; cursor:pointer; margin-top:4px; }
+  .addrow:hover { color:var(--ink); border-color:var(--ink); }
+  .addrow[disabled] { opacity:.45; cursor:default; }
+
+  .navprev { border-radius:8px; padding:10px 6px 8px; display:flex; }
+  .navprev .navprev-empty { font-family:var(--mono); font-size:11px; color:#6C7581; padding:4px 8px; }
+  .navprev .pv-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+                     min-width:0; }
+  .navprev .pv-btn svg { width:22px; height:22px; }
+  .navprev .pv-btn span { font-size:9.5px; font-weight:600; max-width:100%; overflow:hidden;
+                          text-overflow:ellipsis; white-space:nowrap; }
+  .navprev .pv-btn .lockmark { font-size:8px; opacity:.8; }
+
   /* store cards ----------------------------------------------------- */
   .stores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
   .store { border:1px solid var(--paper-line); border-radius:3px; padding:18px; background:#FDFCFA; }
@@ -313,9 +342,87 @@
       </div>
     </section>
 
-    <!-- 05 SIGNING -->
+    <!-- 05 APP CHROME & BUTTONS -->
     <section class="sect">
-      <h2><span class="no">05</span>Signing</h2>
+      <h2><span class="no">05</span>Buttons &amp; app chrome</h2>
+      <p class="lede">Give the app its own buttons: pick an icon, name it, and choose what it does — open a page, share, call, go home. Real app chrome also helps store review see more than "a website in a shell".</p>
+      <div class="switches">
+        <button type="button" class="sw" id="sw-topbar" aria-pressed="false">
+          <span class="box"></span><span class="c"><strong>Title bar</strong>
+          <span>A slim bar across the top with the app's name, in your theme colour.</span></span>
+        </button>
+      </div>
+      <div class="group">
+        <h3>Button bar (up to 5 buttons)</h3>
+        <div id="nav-rows"></div>
+        <button type="button" class="addrow" id="btn-add-nav">+ Add a button</button>
+        <div class="note" id="nav-note"></div>
+      </div>
+      <div class="group">
+        <h3>Preview</h3>
+        <div class="navprev" id="nav-preview"><span class="navprev-empty">No buttons yet — the app fills the whole screen.</span></div>
+      </div>
+    </section>
+
+    <!-- 06 PAID FEATURES -->
+    <section class="sect">
+      <h2><span class="no">06</span>Paid features</h2>
+      <p class="lede">Sell premium. Mark buttons as premium and they stay locked behind a paywall screen until the user enters an unlock code you sold them — no store account, no backend, works offline. Your web page can gate its own features too via <code class="k">window.PackrApp</code>.</p>
+      <div class="switches">
+        <button type="button" class="sw" id="sw-premium" aria-pressed="false">
+          <span class="box"></span><span class="c"><strong>Enable paid features</strong>
+          <span>Adds the premium screen and the unlock-code system to the app.</span></span>
+        </button>
+      </div>
+      <div id="premium-only" style="display:none">
+        <div class="group">
+          <h3>The offer</h3>
+          <div class="grid g2">
+            <label class="f"><span class="cap">Payment link (optional)</span>
+              <input type="text" id="pm-url" placeholder="https://buy.stripe.com/… or paypal.me/…" spellcheck="false">
+              <span class="sub">Opens in the phone's browser. After payment you send the buyer an unlock code.</span>
+            </label>
+            <label class="f"><span class="cap">Price line</span>
+              <input type="text" id="pm-price" maxlength="40" placeholder="Get premium — US$4.99">
+            </label>
+            <label class="f wide"><span class="cap">What premium gets them</span>
+              <textarea id="pm-pitch" maxlength="400" rows="3" style="width:100%;font-family:var(--mono);font-size:13px;border:1px solid var(--paper-line);border-bottom-width:2px;border-radius:2px;padding:9px 11px" placeholder="Unlock the full catalogue, offline exports, and priority support."></textarea>
+            </label>
+          </div>
+        </div>
+        <div class="group">
+          <h3>Unlock codes</h3>
+          <p class="lede" style="margin-bottom:12px">Codes are generated here and only their fingerprints are built into the app — the codes themselves exist nowhere but the file you download. One code unlocks one device; codes are reusable unless you rebuild with a new set.</p>
+          <div class="grid g3">
+            <label class="f"><span class="cap">How many</span>
+              <input type="number" id="pm-count" value="20" min="1" max="500" step="1">
+            </label>
+            <label class="f"><span class="cap">&nbsp;</span>
+              <span class="with-btn"><button type="button" id="btn-gen-codes" style="flex:1;padding:10px">Generate codes</button></span>
+            </label>
+            <label class="f"><span class="cap">In the app</span>
+              <span style="font-family:var(--mono);font-size:13px;display:block;padding:10px 0" id="pm-hash-count">0 codes</span>
+            </label>
+          </div>
+          <div id="pm-codes-out" style="display:none">
+            <textarea id="pm-codes" readonly rows="6" style="width:100%;font-family:var(--mono);font-size:12px;border:1px solid var(--paper-line);border-radius:2px;padding:9px 11px;margin-top:10px"></textarea>
+            <div class="actions" style="display:flex;gap:8px;margin-top:8px">
+              <a class="dl" id="pm-download" download="unlock-codes.txt" style="font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;background:var(--ink);color:var(--paper);border-radius:2px;padding:9px 16px;text-decoration:none">Download codes.txt</a>
+              <button type="button" class="qr-toggle" id="btn-clear-codes" style="font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;background:none;border:1px solid var(--paper-line);color:var(--ink);border-radius:2px;padding:9px 16px;cursor:pointer">Remove all codes</button>
+            </div>
+          </div>
+          <div class="note" data-tone="warn" style="margin-top:12px">Save the downloaded file — codes cannot be recovered from the app, only replaced by rebuilding. New codes add to the set; "Remove all" starts over.</div>
+        </div>
+        <div class="group">
+          <h3>Selling through the app stores?</h3>
+          <div class="note">Google Play and the Apple App Store require their own billing (Google Play Billing / Apple In-App Purchase) for digital goods sold inside store-distributed apps — payment links and unlock codes there can get the app rejected. This system is built for the QR-install / sideload route, internal apps, and apps selling real-world goods or services. For store IAP you would extend the generated projects with the store SDKs.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 SIGNING -->
+    <section class="sect">
+      <h2><span class="no">07</span>Signing</h2>
       <p class="lede">Debug builds carry a throwaway key — fine for your own phone, useless for stores. Release builds are signed with a keystore you own and must never lose.</p>
       <div class="segs" data-seg="buildType">
         <button type="button" class="seg" data-value="debug">
@@ -370,9 +477,9 @@
       </div>
     </section>
 
-    <!-- 06 BUILD -->
+    <!-- 08 BUILD -->
     <section class="sect">
-      <h2><span class="no">06</span>Build &amp; install</h2>
+      <h2><span class="no">08</span>Build &amp; install</h2>
       <p class="lede">APK installs directly on Android phones. AAB is the format the Google Play Console accepts. Build, then scan the QR code with the phone's camera to install.</p>
       <div class="switches">
         <button type="button" class="sw" id="out-apk" aria-pressed="true">
@@ -387,15 +494,15 @@
       <div id="artefacts"></div>
     </section>
 
-    <!-- 07 STORES -->
+    <!-- 09 STORES -->
     <section class="sect">
-      <h2><span class="no">07</span>The app stores</h2>
-      <p class="lede">Both stores take this app — with paperwork. Google Play wants a signed AAB from section 06. The Apple App Store cannot take an APK at all: Packr generates the matching Xcode project instead, and a Mac finishes the job.</p>
+      <h2><span class="no">09</span>The app stores</h2>
+      <p class="lede">Both stores take this app — with paperwork. Google Play wants a signed AAB from section 08. The Apple App Store cannot take an APK at all: Packr generates the matching Xcode project instead, and a Mac finishes the job.</p>
       <div class="stores">
         <div class="store">
           <h4>Google Play</h4>
           <ol>
-            <li>Build <strong>Release + AAB</strong> above, signed with your keystore.</li>
+            <li>Build <strong>Release + AAB</strong> in section 08, signed with your keystore.</li>
             <li>Create a developer account at <code class="k">play.google.com/console</code> (US$25, once).</li>
             <li>Create the app, upload the <code class="k">.aab</code> under Production → Create release.</li>
             <li>Fill the store listing, content rating and data-safety forms, then roll out.</li>
@@ -424,6 +531,8 @@
         <dt>Source</dt><dd id="t-source">—</dd>
         <dt>Type</dt><dd id="t-type">debug</dd>
         <dt>Files</dt><dd id="t-outputs">apk</dd>
+        <dt>Buttons</dt><dd id="t-buttons">none</dd>
+        <dt>Premium</dt><dd id="t-premium">off</dd>
       </dl>
       <button type="button" class="go" id="btn-build">Build the app</button>
       <p class="aside-note" id="aside-note">Runs Gradle on this machine. The first build downloads the Android toolchain pieces and can take several minutes; later builds are quick.</p>
@@ -457,6 +566,9 @@ const S = {
   keystorePath: '',
   keystoreAlias: '',
   keystorePassword: '',
+  topBar: false,
+  navButtons: [],
+  premium: { enabled: false, paymentUrl: '', priceText: '', pitch: '', codeHashes: [] },
 };
 
 let environment = null;
@@ -475,6 +587,12 @@ function loadState() {
     const raw = localStorage.getItem('packr-station');
     if (raw) Object.assign(S, JSON.parse(raw), { keystorePassword: '' });
   } catch (e) {}
+  if (!Array.isArray(S.navButtons)) S.navButtons = [];
+  S.premium = Object.assign(
+    { enabled: false, paymentUrl: '', priceText: '', pitch: '', codeHashes: [] },
+    S.premium && typeof S.premium === 'object' ? S.premium : {}
+  );
+  if (!Array.isArray(S.premium.codeHashes)) S.premium.codeHashes = [];
 }
 
 /* ------------------------------------------------------------- api helper */
@@ -605,6 +723,13 @@ function renderTicket() {
   $('t-source').textContent = S.source ? (S.mode === 'local' ? 'bundled files' : 'live address') : '—';
   $('t-type').textContent = S.buildType;
   $('t-outputs').textContent = S.outputs.join(' + ') || '—';
+  $('t-buttons').textContent = S.navButtons.length
+    ? `${S.navButtons.length}${S.topBar ? ' + title bar' : ''}`
+    : (S.topBar ? 'title bar' : 'none');
+  $('t-premium').textContent = S.premium.enabled
+    ? `on · ${S.premium.codeHashes.length} codes`
+    : 'off';
+  renderNavPreview();
 }
 
 function renderReleaseBits() {
@@ -634,6 +759,9 @@ function currentConfig() {
     buildType: S.buildType,
     outputs: S.outputs,
     keystore,
+    topBar: S.topBar,
+    navButtons: S.navButtons,
+    premium: S.premium,
   };
 }
 
@@ -654,7 +782,7 @@ async function startBuild() {
   if (building) return;
   if (S.buildType === 'release' && !S.keystorePath) {
     note('build-note',
-      'A release build without a keystore comes out unsigned and will not install. Pick or create a keystore in section 05, or build debug.',
+      'A release build without a keystore comes out unsigned and will not install. Pick or create a keystore in section 07, or build debug.',
       'warn');
     if (S.outputs.includes('aab')) return;
   }
@@ -777,7 +905,133 @@ async function toggleQr(card, artefact, toggle) {
   await draw();
 }
 
-/* -------------------------------------------------------------- keystores */
+/* ------------------------------------------------------- buttons & chrome */
+
+let catalog = { icons: {}, actions: {}, maxButtons: 5 };
+
+async function loadCatalog() {
+  try { catalog = await api('/api/icons'); } catch (error) {}
+  renderNavRows();
+  renderNavPreview();
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function iconSvg(name, color) {
+  const path = catalog.icons[name];
+  if (!path) return '';
+  return `<svg viewBox="0 0 24 24" fill="${color}" aria-hidden="true"><path d="${path}"/></svg>`;
+}
+
+function isDarkColor(hex) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!match) return true;
+  const value = parseInt(match[1], 16);
+  return 0.299 * ((value >> 16) & 255) + 0.587 * ((value >> 8) & 255) + 0.114 * (value & 255) < 150;
+}
+
+function touchNav() {
+  saveState();
+  renderNavRows();
+  renderNavPreview();
+  renderTicket();
+}
+
+function renderNavRows() {
+  const holder = $('nav-rows');
+  holder.innerHTML = '';
+  S.navButtons.forEach((button, index) => {
+    const row = document.createElement('div');
+    row.className = 'navrow';
+    const iconOptions = Object.keys(catalog.icons).map((name) =>
+      `<option value="${name}"${name === button.icon ? ' selected' : ''}>${name}</option>`).join('');
+    const actionOptions = Object.entries(catalog.actions).map(([key, action]) =>
+      `<option value="${key}"${key === button.action ? ' selected' : ''}>${escapeHtml(action.label)}</option>`).join('');
+    const meta = catalog.actions[button.action] || {};
+    row.innerHTML = `
+      <span class="iconsel">${iconSvg(button.icon, '#12181F')}<select class="f-icon">${iconOptions}</select></span>
+      <input type="text" class="f-label" maxlength="14" placeholder="Label" value="${escapeHtml(button.label || '')}">
+      <select class="f-action">${actionOptions}</select>
+      <button type="button" class="lockbtn" aria-pressed="${button.premium ? 'true' : 'false'}"
+              title="Premium — locked until an unlock code is entered">&#9813;</button>
+      <button type="button" class="rmbtn" title="Remove this button">&#215;</button>
+      ${meta.value ? `<span class="valuewrap"><input type="text" class="f-value" placeholder="${escapeHtml(meta.value)}" value="${escapeHtml(button.value || '')}" spellcheck="false"></span>` : ''}`;
+    row.querySelector('.f-icon').addEventListener('change', (e) => { button.icon = e.target.value; touchNav(); });
+    row.querySelector('.f-label').addEventListener('input', (e) => {
+      button.label = e.target.value; saveState(); renderNavPreview(); renderTicket();
+    });
+    row.querySelector('.f-action').addEventListener('change', (e) => { button.action = e.target.value; touchNav(); });
+    row.querySelector('.lockbtn').addEventListener('click', () => {
+      button.premium = !button.premium;
+      if (button.premium && !S.premium.enabled) {
+        note('nav-note', 'Premium buttons need paid features switched on in section 06.', 'warn');
+      } else {
+        note('nav-note', '');
+      }
+      touchNav();
+    });
+    row.querySelector('.rmbtn').addEventListener('click', () => { S.navButtons.splice(index, 1); touchNav(); });
+    const valueInput = row.querySelector('.f-value');
+    if (valueInput) valueInput.addEventListener('input', (e) => { button.value = e.target.value; saveState(); });
+    holder.appendChild(row);
+  });
+  $('btn-add-nav').disabled = S.navButtons.length >= (catalog.maxButtons || 5);
+}
+
+function renderNavPreview() {
+  const holder = $('nav-preview');
+  const dark = isDarkColor(S.themeColor);
+  const ink = dark ? '#FFFFFF' : '#12181F';
+  holder.style.background = S.themeColor;
+  if (!S.navButtons.length) {
+    holder.innerHTML = `<span class="navprev-empty" style="color:${dark ? 'rgba(255,255,255,.6)' : '#5C6570'}">No buttons yet — the app fills the whole screen.</span>`;
+    return;
+  }
+  holder.innerHTML = S.navButtons.map((button) => `
+    <span class="pv-btn" style="color:${ink}">
+      ${iconSvg(button.icon, ink)}
+      <span>${escapeHtml(button.label || '…')}</span>
+      ${button.premium ? '<span class="lockmark">&#9813; premium</span>' : ''}
+    </span>`).join('');
+}
+
+/* ----------------------------------------------------------- paid features */
+
+function renderPremiumBits() {
+  $('premium-only').style.display = S.premium.enabled ? '' : 'none';
+  const count = S.premium.codeHashes.length;
+  $('pm-hash-count').textContent = `${count} code${count === 1 ? '' : 's'}`;
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateCodes() {
+  const count = Math.min(500, Math.max(1, Number($('pm-count').value) || 20));
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L look-alikes
+  const codes = [];
+  for (let i = 0; i < count; i++) {
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    let raw = '';
+    for (const byte of bytes) raw += alphabet[byte % alphabet.length];
+    codes.push(`${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`);
+  }
+  for (const code of codes) {
+    S.premium.codeHashes.push(await sha256Hex(code.replace(/-/g, '')));
+  }
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+  $('pm-codes-out').style.display = '';
+  $('pm-codes').value = codes.join('\n');
+  $('pm-download').href =
+    'data:text/plain;charset=utf-8,' + encodeURIComponent(codes.join('\r\n') + '\r\n');
+}
 
 async function createKeystore() {
   const name = $('new-ks-name').value.trim();
@@ -869,6 +1123,39 @@ bindSw('sw-external', 'externalLinksInBrowser');
 bindSw('sw-refresh', 'pullToRefresh');
 bindSw('sw-zoom', 'allowZoom');
 bindSw('sw-cleartext', 'allowCleartext');
+bindSw('sw-topbar', 'topBar');
+
+$('sw-premium').setAttribute('aria-pressed', String(S.premium.enabled));
+$('sw-premium').addEventListener('click', () => {
+  S.premium.enabled = !S.premium.enabled;
+  $('sw-premium').setAttribute('aria-pressed', String(S.premium.enabled));
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+});
+
+for (const [id, key] of [['pm-url', 'paymentUrl'], ['pm-price', 'priceText'], ['pm-pitch', 'pitch']]) {
+  const el = $(id);
+  el.value = S.premium[key];
+  el.addEventListener('input', () => {
+    S.premium[key] = el.value;
+    saveState();
+  });
+}
+
+$('btn-add-nav').addEventListener('click', () => {
+  S.navButtons.push({ label: 'Home', icon: 'home', action: 'home', value: '', premium: false });
+  touchNav();
+});
+$('btn-gen-codes').addEventListener('click', generateCodes);
+$('btn-clear-codes').addEventListener('click', () => {
+  S.premium.codeHashes = [];
+  $('pm-codes-out').style.display = 'none';
+  $('pm-codes').value = '';
+  saveState();
+  renderPremiumBits();
+  renderTicket();
+});
 
 document.querySelectorAll('[data-perm]').forEach((el) => {
   const perm = el.dataset.perm;
@@ -925,13 +1212,15 @@ $('btn-play-shortcut').addEventListener('click', () => {
   renderReleaseBits();
   renderTicket();
   saveState();
-  document.querySelectorAll('.sect')[4].scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.sect')[6].scrollIntoView({ behavior: 'smooth' });
 });
 
 renderModeBits();
 renderReleaseBits();
+renderPremiumBits();
 renderTicket();
 refreshEnvironment();
+loadCatalog();
 </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ const path = require('path');
 const { stageWebAssets, copyTree, escapeXml } = require('./project');
 const { iconPngBuffer } = require('./icons');
 const { zipDirectory } = require('./zip');
+const appui = require('./appui');
 
 const TEMPLATE_DIR = path.join(__dirname, '..', 'template-ios');
 
@@ -131,6 +132,12 @@ async function materialiseIos(config, projectDir) {
   if (!fs.existsSync(offlinePath)) {
     fs.writeFileSync(offlinePath, offlineHtml(config), 'utf8');
   }
+
+  // App chrome: runtime config and the premium screen, same as Android.
+  const packrDir = path.join(projectDir, 'www', '_packr');
+  fs.mkdirSync(packrDir, { recursive: true });
+  fs.writeFileSync(path.join(packrDir, 'app-config.json'), appui.appConfigJson(config), 'utf8');
+  fs.writeFileSync(path.join(packrDir, 'paywall.html'), appui.paywallHtml(config), 'utf8');
 
   const startUrl = config.mode === 'local' ? '' : config.source;
   const orientations = ORIENTATION_SETS[config.orientation] || ORIENTATION_SETS.unspecified;

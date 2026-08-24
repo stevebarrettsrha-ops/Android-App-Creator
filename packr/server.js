@@ -13,6 +13,7 @@ const { build } = require('./lib/build');
 const { createKeystore } = require('./lib/keystore');
 const { buildIosZip } = require('./lib/ios');
 const qr = require('./lib/qr');
+const appui = require('./lib/appui');
 
 const PORT = Number(process.env.PACKR_PORT || 4477);
 // The server binds all interfaces so a phone on the same Wi-Fi can fetch a
@@ -253,6 +254,17 @@ const server = http.createServer(async (request, response) => {
         port: PORT,
         sharing: HOST !== '127.0.0.1',
         lan: lanAddresses(),
+      });
+    }
+
+    // The button icon set and available actions, for the docket's editor.
+    if (request.method === 'GET' && route === '/api/icons') {
+      const icons = {};
+      for (const [name, icon] of Object.entries(appui.ICONS)) icons[name] = icon.path;
+      return sendJson(response, 200, {
+        icons,
+        actions: appui.ACTIONS,
+        maxButtons: appui.MAX_BUTTONS,
       });
     }
 

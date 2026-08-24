@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check lib/env.js && node --check lib/build.js && node --check lib/icons.js && node --check lib/keystore.js && node --check lib/project.js && node --check lib/qr.js && node --check lib/zip.js && node --check lib/ios.js",
+    "check": "node --check server.js && node --check lib/env.js && node --check lib/build.js && node --check lib/icons.js && node --check lib/keystore.js && node --check lib/project.js && node --check lib/qr.js && node --check lib/zip.js && node --check lib/ios.js && node --check lib/appui.js",
     "test": "node test-materialise.js"
   },
   "engines": { "node": ">=18" },

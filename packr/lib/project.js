@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { writeIcons } = require('./icons');
+const appui = require('./appui');
 
 const TEMPLATE_DIR = path.join(__dirname, '..', 'template');
 
@@ -88,6 +89,11 @@ function validate(input) {
   config.outputs = Array.isArray(input.outputs) && input.outputs.length ? input.outputs : ['apk'];
   config.outputs = config.outputs.filter((o) => o === 'apk' || o === 'aab');
   if (!config.outputs.length) config.outputs = ['apk'];
+
+  const ui = appui.validateAppUi(input, errors);
+  config.topBar = ui.topBar;
+  config.navButtons = ui.navButtons;
+  config.premium = ui.premium;
 
   config.keystore = input.keystore && input.keystore.path ? { ...input.keystore } : null;
   if (config.buildType === 'release' && config.outputs.includes('aab') && !config.keystore) {
@@ -297,6 +303,24 @@ async function materialise(config, projectDir) {
 
   const iconNotes = await writeIcons(resDir, config);
   notes.push(...iconNotes);
+
+  // App chrome: runtime config, the premium screen, and button icon drawables.
+  const packrAssets = path.join(mainDir, 'assets', '_packr');
+  fs.mkdirSync(packrAssets, { recursive: true });
+  fs.writeFileSync(path.join(packrAssets, 'app-config.json'), appui.appConfigJson(config), 'utf8');
+  fs.writeFileSync(path.join(packrAssets, 'paywall.html'), appui.paywallHtml(config), 'utf8');
+
+  const drawableDir = path.join(resDir, 'drawable');
+  fs.mkdirSync(drawableDir, { recursive: true });
+  for (const icon of appui.usedIcons(config.navButtons)) {
+    fs.writeFileSync(path.join(drawableDir, `pk_${icon}.xml`), appui.vectorDrawableXml(icon), 'utf8');
+  }
+  if (config.navButtons.length) {
+    notes.push(`Button bar: ${config.navButtons.map((b) => b.label).join(' · ')}`);
+  }
+  if (config.premium.enabled) {
+    notes.push(`Paid features on, ${config.premium.codeHashes.length} unlock code(s) baked in.`);
+  }
 
   return { projectDir, startUrl, notes };
 }

@@ -65,6 +65,60 @@ will make Packr enable cleartext traffic and warn you.
 
 ---
 
+## Buttons and app chrome
+
+Section 05 of the docket gives the app its own controls instead of leaving it a bare
+web page:
+
+- **A title bar** with the app's name, in your theme colour.
+- **A button bar** of up to five buttons. Each button gets an icon (26 built in — drawn
+  as vector drawables on Android and matched to SF Symbols on iOS), a label, and an
+  action: go to the start page, back, forward, reload, share the current page, open a
+  specific page or URL, open a link in the real browser, call a phone number, compose
+  an email, or open the premium screen.
+
+Buttons are native — not injected into your page — so they work even while the page is
+loading or offline. Real chrome also matters for store review: both stores reject apps
+that are indistinguishable from a browser tab.
+
+---
+
+## Paid features
+
+Section 06 adds a premium tier that works completely offline, with no store account and
+no server:
+
+1. Switch **paid features** on, write the pitch and price, and (optionally) add a
+   payment link — Stripe, PayPal, anything. The link opens in the phone's real browser.
+2. **Generate unlock codes.** The codes are created in your browser and only their
+   SHA-256 fingerprints are built into the app. Download the codes file and keep it —
+   you sell or hand out codes however you like (after a payment, in person, by email).
+3. Mark any button **premium** (the crown toggle). Tapping it before unlocking opens
+   the paywall screen; after a valid code is entered on that screen, everything opens.
+   Unlocking is per device and survives restarts.
+
+Your own web content can gate features too — both shells inject a bridge:
+
+```js
+window.PackrApp.isPremium()        // true once unlocked (always true if premium is off)
+await Promise.resolve(window.PackrApp.unlock(code))  // true if the code was valid
+window.PackrApp.openPaywall()      // show the premium screen
+window.PackrApp.openExternal(url)  // open a link in the system browser
+window.PackrApp.goHome()           // load the start page
+```
+
+(The `Promise.resolve` wrapper smooths over the platforms: Android answers
+synchronously, iOS with a Promise.)
+
+**Selling through the stores?** Google Play and the Apple App Store require their own
+billing (Google Play Billing / Apple In-App Purchase) for digital goods inside
+store-distributed apps — payment links and unlock codes there can get an app rejected.
+This system is aimed at the QR-install / sideload route, internal distribution, and
+apps selling real-world goods or services. For store IAP, extend the generated projects
+with the store SDKs.
+
+---
+
 ## Signing, and why it is not optional
 
 - **Debug** builds are signed with a throwaway key. Fine for sideloading onto a test phone.
@@ -174,6 +228,7 @@ lib/build.js             Gradle invocation, artefact collection
 lib/qr.js                QR code generator for install links (dependency-free)
 lib/zip.js               ZIP writer for the iOS project export (dependency-free)
 lib/ios.js               Xcode project generation for the Apple App Store
+lib/appui.js             button icons/actions, app chrome, paywall + unlock codes
 public/index.html        the interface
 template/                the Android project skeleton
 template-ios/            the Xcode project skeleton

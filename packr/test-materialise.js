@@ -357,6 +357,106 @@ function walk(dir) {
     assert.ok(iosZip.bytes > 5000, 'zip suspiciously small');
   });
 
+  // -------------------------------------------- app chrome & paid features
+
+  console.log('\napp chrome & paid features');
+
+  const appui = require('./lib/appui');
+
+  check('bad buttons are rejected with pointed errors', () => {
+    const { errors } = validate({
+      mode: 'url', source: 'https://x.org', appName: 'X', packageId: 'org.demo.x', versionCode: 1,
+      navButtons: [
+        { label: '', icon: 'nope', action: 'mystery' },
+        { label: 'Shop', icon: 'cart', action: 'page' },
+        { label: 'Mail', icon: 'mail', action: 'email', value: 'not-an-email' },
+      ],
+    });
+    assert.ok(errors.some((e) => /give it a label/i.test(e)), 'missing label not caught');
+    assert.ok(errors.some((e) => /unknown icon/i.test(e)), 'bad icon not caught');
+    assert.ok(errors.some((e) => /unknown action/i.test(e)), 'bad action not caught');
+    assert.ok(errors.some((e) => /needs a value/i.test(e)), 'missing page value not caught');
+    assert.ok(errors.some((e) => /email address/i.test(e)), 'bad email not caught');
+  });
+
+  check('premium mismatches are rejected', () => {
+    const base = { mode: 'url', source: 'https://x.org', appName: 'X', packageId: 'org.demo.x', versionCode: 1 };
+    const locked = validate({
+      ...base,
+      navButtons: [{ label: 'Pro', icon: 'crown', action: 'home', premium: true }],
+    });
+    assert.ok(locked.errors.some((e) => /paid features are off/i.test(e)));
+    const noCodes = validate({ ...base, premium: { enabled: true, codeHashes: [] } });
+    assert.ok(noCodes.errors.some((e) => /no unlock codes/i.test(e)));
+  });
+
+  const chromeInput = {
+    mode: 'local', source: site, appName: 'Chrome App', packageId: 'org.demo.chromeapp',
+    versionName: '1.0.0', versionCode: 1, topBar: true,
+    navButtons: [
+      { label: 'Home', icon: 'home', action: 'home' },
+      { label: 'Shop', icon: 'cart', action: 'page', value: 'shop.html', premium: true },
+      { label: 'Call', icon: 'phone', action: 'call', value: '+1 876 555 0100' },
+    ],
+    premium: {
+      enabled: true, paymentUrl: 'https://buy.example.org/x', priceText: 'US$4.99',
+      pitch: "Everything & more — you'll love it.", codeHashes: ['ab'.repeat(32)],
+    },
+  };
+  const chromeValidated = validate(chromeInput);
+  assert.deepStrictEqual(chromeValidated.errors, [], chromeValidated.errors.join('; '));
+  const chromeDir = path.join(tmp, 'project-chrome');
+  await materialise(chromeValidated.config, chromeDir);
+
+  check('button icons land as vector drawables', () => {
+    const drawables = path.join(chromeDir, 'app/src/main/res/drawable');
+    for (const icon of ['pk_home.xml', 'pk_cart.xml', 'pk_phone.xml']) {
+      const file = path.join(drawables, icon);
+      assert.ok(fs.existsSync(file), `${icon} missing`);
+      assert.ok(fs.readFileSync(file, 'utf8').includes('android:pathData='), `${icon} has no path`);
+    }
+  });
+
+  check('runtime config ships as a parseable asset with sf symbol names', () => {
+    const configPath = path.join(chromeDir, 'app/src/main/assets/_packr/app-config.json');
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.strictEqual(parsed.topBar, true);
+    assert.strictEqual(parsed.navButtons.length, 3);
+    assert.strictEqual(parsed.navButtons[1].premium, true);
+    assert.strictEqual(parsed.navButtons[1].sf, 'cart.fill');
+    assert.deepStrictEqual(parsed.premium, { enabled: true, codeHashes: ['ab'.repeat(32)] });
+    assert.ok(!('paymentUrl' in parsed.premium), 'payment url does not belong in the shell config');
+  });
+
+  check('the paywall page is generated with the offer, escaped', () => {
+    const paywall = fs.readFileSync(
+      path.join(chromeDir, 'app/src/main/assets/_packr/paywall.html'), 'utf8'
+    );
+    assert.ok(paywall.includes('US$4.99'));
+    assert.ok(paywall.includes('Everything &amp; more'), 'pitch not xml-escaped');
+    assert.ok(paywall.includes('https://buy.example.org/x'));
+    assert.ok(paywall.includes('PackrApp'), 'paywall does not use the bridge');
+  });
+
+  const chromeIosDir = path.join(tmp, 'project-chrome-ios');
+  await materialiseIos(chromeValidated.config, chromeIosDir);
+  check('ios bundle gets _packr config and paywall', () => {
+    const configPath = path.join(chromeIosDir, 'www/_packr/app-config.json');
+    assert.ok(fs.existsSync(configPath), 'ios app-config.json missing');
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.strictEqual(parsed.navButtons[0].sf, 'house.fill');
+    assert.ok(fs.existsSync(path.join(chromeIosDir, 'www/_packr/paywall.html')));
+  });
+
+  check('every icon in the set has drawable-safe path data', () => {
+    for (const [name, icon] of Object.entries(appui.ICONS)) {
+      assert.ok(icon.path.length > 10, `${name} path too short`);
+      assert.ok(/^[MmLlHhVvZzAaCcQqSsTt0-9 .,-]+$/.test(icon.path), `${name} has odd characters`);
+      assert.ok(icon.sf, `${name} has no SF Symbol mapping`);
+      assert.strictEqual(appui.vectorDrawableXml(name).includes(icon.path), true);
+    }
+  });
+
   console.log(
     failures ? `\n${failures} check(s) failed\n` : '\nall checks passed\n'
   );

@@ -13,6 +13,11 @@ What you get from one docket of settings:
 - A complete **Xcode project** of the same app for the **Apple App Store** (Apple only
   permits iOS apps to be built and uploaded from Xcode on a Mac — the generated project
   plus the included `APP-STORE-STEPS.md` covers that path end to end).
+- **Your own app chrome**: a title bar and up to five custom buttons — pick each one's
+  icon and what it does (open a page, share, call, email, go home, and more).
+- **Paid features**: mark buttons premium, set a price and payment link, and generate
+  unlock codes to sell — a paywall screen ships inside the app, no store account or
+  backend needed. Web pages can gate their own features via `window.PackrApp`.
 
 ## Download and run
 

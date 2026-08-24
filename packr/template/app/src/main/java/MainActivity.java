@@ -6,12 +6,16 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Base64;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
@@ -25,6 +29,9 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -39,17 +46,32 @@ import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String ASSET_DOMAIN = "appassets.androidplatform.net";
+    private static final String PAYWALL_URL =
+            "https://" + ASSET_DOMAIN + "/assets/_packr/paywall.html";
+    private static final String PREFS = "packr";
 
     private WebView webView;
     private SwipeRefreshLayout refreshLayout;
     private WebViewAssetLoader assetLoader;
+
+    private JSONObject appConfig = new JSONObject();
+    private boolean premiumEnabled;
+    private final java.util.List<String> premiumHashes = new java.util.ArrayList<>();
 
     private ValueCallback<Uri[]> filePathCallback;
     private ActivityResultLauncher<Intent> fileChooserLauncher;
@@ -68,10 +90,12 @@ public class MainActivity extends AppCompatActivity {
         refreshLayout = findViewById(R.id.refresh);
         webView = findViewById(R.id.webview);
 
+        loadAppConfig();
         registerLaunchers();
         configureWebView();
         configureRefresh();
         configureBackNavigation();
+        buildChrome();
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
@@ -162,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         webView.addJavascriptInterface(new DownloadBridge(), "PackrBridge");
+        webView.addJavascriptInterface(new PackrAppBridge(), "PackrApp");
         webView.setWebViewClient(new HostWebViewClient());
         webView.setWebChromeClient(new HostChromeClient());
         webView.setDownloadListener(this::handleDownload);
@@ -187,6 +212,245 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    // ------------------------------------------------- app chrome & buttons
+
+    /** Settings that are structured rather than scalar ship as a JSON asset. */
+    private void loadAppConfig() {
+        try (InputStream stream = getAssets().open("_packr/app-config.json")) {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int read;
+            while ((read = stream.read(chunk)) != -1) {
+                buffer.write(chunk, 0, read);
+            }
+            appConfig = new JSONObject(buffer.toString("UTF-8"));
+        } catch (Exception e) {
+            appConfig = new JSONObject();
+        }
+        JSONObject premium = appConfig.optJSONObject("premium");
+        premiumEnabled = premium != null && premium.optBoolean("enabled");
+        if (premium != null) {
+            JSONArray hashes = premium.optJSONArray("codeHashes");
+            for (int i = 0; hashes != null && i < hashes.length(); i++) {
+                premiumHashes.add(hashes.optString(i).toLowerCase(Locale.ROOT));
+            }
+        }
+    }
+
+    private void buildChrome() {
+        int themeColor;
+        try {
+            themeColor = Color.parseColor(appConfig.optString("themeColor", "#101822"));
+        } catch (Exception e) {
+            themeColor = Color.parseColor("#101822");
+        }
+        boolean darkTheme = (0.299 * Color.red(themeColor)
+                + 0.587 * Color.green(themeColor)
+                + 0.114 * Color.blue(themeColor)) < 150;
+        int ink = darkTheme ? Color.WHITE : Color.parseColor("#12181F");
+
+        if (appConfig.optBoolean("topBar")) {
+            TextView topBar = findViewById(R.id.topbar);
+            topBar.setVisibility(View.VISIBLE);
+            topBar.setText(getString(R.string.app_name));
+            topBar.setBackgroundColor(themeColor);
+            topBar.setTextColor(ink);
+        }
+
+        JSONArray buttons = appConfig.optJSONArray("navButtons");
+        if (buttons == null || buttons.length() == 0) {
+            return;
+        }
+        LinearLayout navbar = findViewById(R.id.navbar);
+        navbar.setVisibility(View.VISIBLE);
+        navbar.setBackgroundColor(themeColor);
+        for (int i = 0; i < buttons.length(); i++) {
+            JSONObject spec = buttons.optJSONObject(i);
+            if (spec == null) {
+                continue;
+            }
+            navbar.addView(makeNavButton(spec, ink),
+                    new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        }
+    }
+
+    private View makeNavButton(JSONObject spec, int ink) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+        TypedValue ripple = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
+        item.setBackgroundResource(ripple.resourceId);
+
+        int iconSize = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
+        ImageView icon = new ImageView(this);
+        int drawable = getResources().getIdentifier(
+                "pk_" + spec.optString("icon"), "drawable", getPackageName());
+        if (drawable != 0) {
+            icon.setImageResource(drawable);
+        }
+        icon.setColorFilter(ink);
+        item.addView(icon, new LinearLayout.LayoutParams(iconSize, iconSize));
+
+        TextView label = new TextView(this);
+        label.setText(spec.optString("label"));
+        label.setTextColor(ink);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        label.setMaxLines(1);
+        item.addView(label);
+
+        item.setOnClickListener(view -> dispatchNavAction(spec));
+        return item;
+    }
+
+    private void dispatchNavAction(JSONObject spec) {
+        if (spec.optBoolean("premium") && !isPremiumUnlocked()) {
+            openPaywall();
+            return;
+        }
+        String value = spec.optString("value");
+        switch (spec.optString("action")) {
+            case "home":
+                webView.loadUrl(BuildConfig.START_URL);
+                break;
+            case "back":
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                }
+                break;
+            case "forward":
+                if (webView.canGoForward()) {
+                    webView.goForward();
+                }
+                break;
+            case "reload":
+                webView.reload();
+                break;
+            case "share":
+                shareCurrentPage();
+                break;
+            case "page":
+                webView.loadUrl(resolvePage(value));
+                break;
+            case "browser":
+                openExternally(Uri.parse(value));
+                break;
+            case "call":
+                openExternally(Uri.parse("tel:" + value.replaceAll("\\s+", "")));
+                break;
+            case "email":
+                openExternally(Uri.parse("mailto:" + value));
+                break;
+            case "paywall":
+                openPaywall();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private String resolvePage(String value) {
+        if (value.startsWith("http://") || value.startsWith("https://")) {
+            return value;
+        }
+        String cleaned = value.startsWith("/") ? value.substring(1) : value;
+        if (BuildConfig.LOCAL_MODE) {
+            return "https://" + ASSET_DOMAIN + "/assets/www/" + cleaned;
+        }
+        try {
+            return java.net.URI.create(BuildConfig.START_URL).resolve(cleaned).toString();
+        } catch (Exception e) {
+            return BuildConfig.START_URL;
+        }
+    }
+
+    private void shareCurrentPage() {
+        String url = webView.getUrl();
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType("text/plain");
+        send.putExtra(Intent.EXTRA_TEXT, url == null ? getString(R.string.app_name) : url);
+        try {
+            startActivity(Intent.createChooser(send, null));
+        } catch (ActivityNotFoundException e) {
+            toast(getString(R.string.no_handler));
+        }
+    }
+
+    // ------------------------------------------------------- paid features
+
+    private boolean isPremiumUnlocked() {
+        if (!premiumEnabled) {
+            return true;
+        }
+        return getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("premium_unlocked", false);
+    }
+
+    /** Codes are matched by SHA-256 against the hashes baked into the app. */
+    private boolean redeemCode(String code) {
+        String normalised = code == null
+                ? ""
+                : code.replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
+        if (normalised.isEmpty()) {
+            return false;
+        }
+        if (!premiumHashes.contains(sha256Hex(normalised))) {
+            return false;
+        }
+        getSharedPreferences(PREFS, MODE_PRIVATE)
+                .edit().putBoolean("premium_unlocked", true).apply();
+        return true;
+    }
+
+    private String sha256Hex(String text) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(text.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : bytes) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private void openPaywall() {
+        webView.loadUrl(PAYWALL_URL);
+    }
+
+    /**
+     * Exposed to the page as window.PackrApp, and used by the generated
+     * premium screen. Your own web content can gate features with it too.
+     */
+    private class PackrAppBridge {
+        @JavascriptInterface
+        public boolean isPremium() {
+            return isPremiumUnlocked();
+        }
+
+        @JavascriptInterface
+        public boolean unlock(String code) {
+            return redeemCode(code);
+        }
+
+        @JavascriptInterface
+        public void openPaywall() {
+            runOnUiThread(MainActivity.this::openPaywall);
+        }
+
+        @JavascriptInterface
+        public void openExternal(String url) {
+            runOnUiThread(() -> openExternally(Uri.parse(url)));
+        }
+
+        @JavascriptInterface
+        public void goHome() {
+            runOnUiThread(() -> webView.loadUrl(BuildConfig.START_URL));
+        }
     }
 
     // ------------------------------------------------------------- clients
